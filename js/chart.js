@@ -180,8 +180,8 @@
       if (hi - lo < Math.abs(hi) * 1e-9 + 1e-12) { const d = Math.abs(hi) * 0.01 || 1; lo -= d; hi += d; }
       const a = this.tf(p, lo), z = this.tf(p, hi), r = z - a;
       // 위쪽 여백은 범례 높이만큼 확보 (캔들이 범례 글자 밑으로 들어가지 않게)
-      const lgH = p.main ? this._lgMainH || 44 : 22;
-      const ft = U.clamp((lgH + 8) / p.h, 0.07, 0.32), fb = p.main ? (volOv ? 0.1 : 0.06) : 0.08;
+      const lgH = p.main ? (this._lgMainH || 44) + (this.app.set.hiLo !== false ? 16 : 0) : 22;
+      const ft = U.clamp((lgH + 8) / p.h, 0.07, 0.34), fb = p.main ? (volOv ? 0.1 : 0.06) : 0.08;
       const R = r / (1 - ft - fb);
       p.umin = a - R * fb; p.umax = z + R * ft;
     }
