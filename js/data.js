@@ -115,9 +115,64 @@
   });
 
   /* ================= 업비트 ================= */
+  // 업비트는 웹사이트 출처(Origin)에서 온 브라우저 요청을 강하게 제한한다 (localhost·파일은 제외).
+  // 그래서 배포 사이트에서는 REST를 /api/upbit 프록시로 보내고, 웹소켓은 모든 차트가 연결 하나를 공유한다.
+  const UP_PROXY = !(location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname));
+  const UPWS = {
+    ws: null, subs: new Map(), open: false, tries: 0, timer: 0, st: 0, dec: new TextDecoder(),
+    add(code, sub) {
+      let s = this.subs.get(code);
+      if (!s) { s = new Set(); this.subs.set(code, s); }
+      s.add(sub);
+      this.sync();
+      if (this.open && sub.status) sub.status('live');
+      return () => { s.delete(sub); if (!s.size && this.subs.get(code) === s) this.subs.delete(code); this.sync(); };
+    },
+    each(fn) { for (const s of this.subs.values()) for (const sub of s) fn(sub); },
+    sync() {
+      clearTimeout(this.st);
+      this.st = setTimeout(() => {
+        if (!this.subs.size) {
+          clearTimeout(this.timer);
+          if (this.ws) { const w = this.ws; this.ws = null; this.open = false; w.onclose = null; try { w.close(); } catch (e) {} }
+          return;
+        }
+        if (!this.ws) this.connect(); else if (this.open) this.req();
+      }, 40);
+    },
+    req() { try { this.ws.send(JSON.stringify([{ ticket: 'cl-' + U.uid() }, { type: 'trade', codes: Array.from(this.subs.keys()) }, { format: 'SIMPLE' }])); } catch (e) {} },
+    connect() {
+      clearTimeout(this.timer);
+      let ws;
+      try { ws = new WebSocket('wss://api.upbit.com/websocket/v1'); } catch (e) { this.retry(); return; }
+      this.ws = ws;
+      ws.binaryType = 'arraybuffer';
+      ws.onopen = () => { const re = this.tries > 0; this.tries = 0; this.open = true; this.req(); this.each((s) => s.status && s.status(re ? 'resync' : 'live')); };
+      ws.onmessage = (ev) => {
+        let m;
+        try { m = JSON.parse(typeof ev.data === 'string' ? ev.data : this.dec.decode(ev.data)); } catch (e) { return; }
+        if (!m || m.ty !== 'trade') return;
+        const s = this.subs.get(m.cd);
+        if (s) for (const sub of s) sub.trade(m.tp, m.tv, m.ttms);
+      };
+      ws.onclose = () => {
+        if (this.ws !== ws) return;
+        this.ws = null; this.open = false;
+        if (this.subs.size) { this.each((s) => s.status && s.status('reconnect')); this.retry(); }
+      };
+      ws.onerror = () => { try { ws.close(); } catch (e) {} };
+    },
+    retry() {
+      this.tries++;
+      clearTimeout(this.timer);
+      this.timer = setTimeout(() => { if (this.subs.size && !this.ws) this.connect(); }, Math.min(30000, 1500 * 2 ** Math.min(this.tries, 4)));
+    },
+  };
+  Data.upbitWS = UPWS;
   P.upbit = {
     id: 'upbit', name: '업비트', short: 'UPBIT', kind: 'crypto', more: true,
     host: 'https://api.upbit.com/v1',
+    url(path) { return UP_PROXY ? '/api/upbit?p=' + encodeURIComponent(path) : this.host + path; },
     native: {
       '1m': 'minutes/1', '3m': 'minutes/3', '5m': 'minutes/5', '10m': 'minutes/10', '15m': 'minutes/15',
       '30m': 'minutes/30', '1h': 'minutes/60', '4h': 'minutes/240', '1D': 'days', '1W': 'weeks', '1M': 'months',
@@ -126,7 +181,7 @@
     tz: () => 0,
     async get(path) {
       for (let i = 0; ; i++) {
-        try { return await getJSON(this.host + path); }
+        try { return await getJSON(this.url(path)); }
         catch (e) { if (e.status === 429 && i < 6) { await U.sleep(300 * (i + 1)); continue; } throw e; }
       }
     },
@@ -151,7 +206,7 @@
       const seen = new Set();
       return out.filter((b) => (seen.has(b.t) ? false : (seen.add(b.t), true)));
     },
-    /* 체결(trade) 스트림을 받아 원하는 봉 단위로 직접 집계 */
+    /* 체결(trade) 스트림을 받아 원하는 봉 단위로 직접 집계 (웹소켓은 UPWS 하나를 공유) */
     subscribe(sym, iv, cb, status, ctx) {
       let cur = ctx && ctx.last ? Object.assign({}, ctx.last) : null;
       let timer = 0, lastEmit = 0;
@@ -163,26 +218,30 @@
         else return;
         if (!timer) timer = setTimeout(emit, Math.max(0, 250 - (Date.now() - lastEmit)));
       };
-      const dec = new TextDecoder();
-      const stop = wsLoop(['wss://api.upbit.com/websocket/v1'], (ws) => {
-        ws.send(JSON.stringify([{ ticket: 'cl-' + U.uid() }, { type: 'trade', codes: [sym] }, { format: 'SIMPLE' }]));
-      }, (ev) => {
-        let m; try { m = JSON.parse(typeof ev.data === 'string' ? ev.data : dec.decode(ev.data)); } catch (e) { return; }
-        if (m && m.ty === 'trade') trade(m.tp, m.tv, m.ttms);
-      }, status);
-      // 놓친 체결 보정: 1분마다 REST로 현재 봉 재동기화 (네이티브 주기만)
+      const unsub = UPWS.add(sym, { trade, status });
+      // REST 보정: 웹소켓이 붙어 있으면 1분마다(놓친 체결), 끊겨 있으면 5초마다(대체 갱신) 현재 봉을 다시 받음
       const self = this;
-      const rs = this.native[iv] ? setInterval(async () => {
+      let n = 0;
+      const poll = setInterval(async () => {
+        n++;
+        if (UPWS.open && n % 12) return;
         try {
-          const r = await self.get('/candles/' + self.native[iv] + '?market=' + encodeURIComponent(sym) + '&count=1');
-          if (!r.length) return;
-          const b = self.parse(r[0]);
-          if (!cur || b.t > cur.t) cur = b;
-          else if (b.t === cur.t) { cur.h = Math.max(cur.h, b.h); cur.l = Math.min(cur.l, b.l); cur.v = Math.max(cur.v, b.v); }
+          if (self.native[iv]) {
+            const r = await self.get('/candles/' + self.native[iv] + '?market=' + encodeURIComponent(sym) + '&count=1');
+            if (!r.length) return;
+            const b = self.parse(r[0]);
+            if (!cur || b.t > cur.t) cur = b;
+            else if (b.t === cur.t) { cur.h = Math.max(cur.h, b.h); cur.l = Math.min(cur.l, b.l); cur.v = Math.max(cur.v, b.v); if (!UPWS.open) cur.c = b.c; }
+          } else {
+            const r = await self.get('/ticker?markets=' + encodeURIComponent(sym));
+            if (!r.length) return;
+            trade(r[0].trade_price, 0, r[0].trade_timestamp);
+          }
           emit();
+          if (!UPWS.open && status) status('poll');
         } catch (e) {}
-      }, 60000) : 0;
-      return () => { stop(); clearInterval(rs); clearTimeout(timer); };
+      }, 5000);
+      return () => { unsub(); clearInterval(poll); clearTimeout(timer); };
     },
     async list() {
       if (!this._list) {

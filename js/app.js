@@ -390,12 +390,14 @@
     }
     async checkServer() {
       if (location.protocol === 'file:') { this.server = false; this.st.srv.textContent = '로컬 서버 없음 — 주식은 start.bat으로 실행'; this.st.srv.className = 'st-srv off'; return; }
+      let host = '';
       try {
         const r = await fetch('/api/ping');
         const j = await r.json();
         this.server = !!j.ok;
+        host = j.host || 'local';
       } catch (e) { this.server = false; }
-      this.st.srv.textContent = this.server ? '로컬 서버 연결됨 (주식 데이터 사용 가능)' : '로컬 서버 없음 — 주식은 start.bat으로 실행';
+      this.st.srv.textContent = !this.server ? '로컬 서버 없음 — 주식은 start.bat으로 실행' : host === 'vercel' ? '서버 연결됨 (주식 데이터 사용 가능)' : '로컬 서버 연결됨 (주식 데이터 사용 가능)';
       this.st.srv.className = 'st-srv ' + (this.server ? 'on' : 'off');
     }
 
