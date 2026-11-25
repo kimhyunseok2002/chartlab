@@ -408,6 +408,142 @@
       return { sar: o };
     },
   };
+  /* 자동 추세선: 스윙 고점/저점(피벗)을 이어 만든 선 중, 두 접점 사이에서 종가가 한 번도 넘지 않은 선만 채택.
+     두 번째 접점 이후 종가가 선을 넘으면 '돌파/이탈'로 끝나고, 아니면 현재까지 유효한 선으로 오른쪽 연장. */
+  IND.autotl = {
+    name: '자동 추세선 (Auto Trendlines)', short: 'AutoTL', cat: 'trend', pane: 'main', fmt: 'price', alerts: true,
+    inputs: [
+      inp('len', '피벗 길이 (좌우 봉 수)', 'int', 10, { min: 2, max: 60 }),
+      inp('look', '탐색 범위 (최근 봉 수)', 'int', 300, { min: 30, max: 5000 }),
+      inp('sides', '표시할 선', 'sel', '저항선+지지선', { o: ['저항선+지지선', '저항선만', '지지선만'] }),
+      inp('nAct', '현재 유효한 선 개수 (종류별)', 'int', 1, { min: 0, max: 5 }),
+      inp('nBrk', '돌파·이탈된 선 개수 (종류별)', 'int', 1, { min: 0, max: 5 }),
+      inp('minT', '최소 접점 수', 'int', 2, { min: 2, max: 8 }),
+      inp('tol', '꼬리 허용 폭 (ATR 배수)', 'float', 0.3, { step: 0.05, min: 0 }),
+      inp('maxD', '현재가에서 최대 거리 (ATR 배수, 0=제한 없음)', 'float', 10, { step: 1, min: 0 }),
+      inp('src', '기준 가격', 'sel', '꼬리 (고가/저가)', { o: ['꼬리 (고가/저가)', '몸통 (시가/종가)'] }),
+      inp('ext', '오른쪽으로 연장', 'bool', true),
+      inp('marks', '돌파·이탈 표시', 'bool', true),
+      inp('alert', '돌파·이탈 시 알림', 'bool', false),
+    ],
+    plots: [
+      { k: 'res', n: '저항 추세선', c: '#f23645', w: 2 },
+      { k: 'sup', n: '지지 추세선', c: '#089981', w: 2 },
+      { k: 'resB', n: '돌파된 저항선', c: '#f23645', w: 1, t: 'col' },
+      { k: 'supB', n: '이탈된 지지선', c: '#089981', w: 1, t: 'col' },
+    ],
+    scaleKeys: [],
+    label: (I) => '자동 추세선 ' + I.len + ' · ' + I.look + '봉',
+    calc(b, I, ctx) {
+      const n = b.length, res = arr(n), sup = arr(n), lines = [];
+      const out = { res, sup, lines, alert: null };
+      const len = Math.max(2, I.len | 0);
+      if (n < len * 2 + 3) return out;
+      const atr = TA.atr(b, 14);
+      const at = (k) => (atr[k] === atr[k] ? atr[k] : 0);
+      const body = String(I.src).indexOf('몸통') === 0;
+      const hiS = b.map((x) => (body ? Math.max(x.o, x.c) : x.h)), loS = b.map((x) => (body ? Math.min(x.o, x.c) : x.l));
+      const start = Math.max(0, n - Math.max(30, I.look | 0));
+      const val = (l, k) => l.pa + l.slope * (k - l.a);
+      const sides = [];
+      if (I.sides !== '지지선만') sides.push('res');
+      if (I.sides !== '저항선만') sides.push('sup');
+      for (const side of sides) {
+        const up = side === 'res', src = up ? hiS : loS;
+        let piv = TA.pivots(src, len, len, up).filter((i) => i >= start);
+        if (piv.length > 30) piv = piv.slice(-30);
+        const cands = [];
+        for (let x = 0; x < piv.length - 1; x++) {
+          for (let y = x + 1; y < piv.length; y++) {
+            const a = piv[x], c = piv[y], pa = src[a], slope = (src[c] - pa) / (c - a);
+            let ok = true;
+            for (let k = a + 1; k < c && ok; k++) {
+              const L = pa + slope * (k - a), tl = at(k) * I.tol;
+              if (up ? b[k].c > L || src[k] > L + tl : b[k].c < L || src[k] < L - tl) ok = false;
+            }
+            if (!ok) continue;
+            let brk = -1;
+            for (let k = c + 1; k < n; k++) {
+              const L = pa + slope * (k - a);
+              if (up ? b[k].c > L : b[k].c < L) { brk = k; break; }
+            }
+            const l = { side, a, c, pa, slope, brk, touches: [] };
+            const end = brk >= 0 ? brk : n - 1;
+            for (const p of piv) if (p >= a && p <= end && Math.abs(src[p] - val(l, p)) <= at(p) * Math.max(I.tol, 0.2) + 1e-12) l.touches.push(p);
+            if (l.touches.length >= Math.max(2, I.minT | 0)) cands.push(l);
+          }
+        }
+        const t1 = at(n - 1) * 0.6;
+        const similar = (m, l) => { const k1 = Math.max(m.a, l.a); return Math.abs(val(m, k1) - val(l, k1)) < t1 && Math.abs(val(m, n - 1) - val(l, n - 1)) < t1; };
+        // 순위: 접점 수 + 최근성 − 현재가와의 거리(ATR 단위). 너무 먼 선은 제외
+        const atrN = at(n - 1) || Math.abs(b[n - 1].c) * 0.01 || 1, lastC = b[n - 1].c, maxD = +I.maxD || 0;
+        const dist = (l) => Math.abs(val(l, n - 1) - lastC) / atrN;
+        const score = (l) => l.touches.length * 3 + (4 * (l.c - start)) / Math.max(1, n - start) - 0.4 * dist(l);
+        const rank = (p, q) => score(q) - score(p) || q.c - p.c;
+        const near = (l) => !maxD || dist(l) <= maxD;
+        const pick = [];
+        for (const l of cands.filter((x) => x.brk < 0 && near(x)).sort(rank)) { if (pick.length >= (I.nAct | 0)) break; if (!pick.some((m) => similar(m, l))) pick.push(l); }
+        const pickB = [];
+        for (const l of cands.filter((x) => x.brk >= 0).sort((p, q) => q.brk - p.brk || q.touches.length - p.touches.length)) {
+          if (pickB.length >= (I.nBrk | 0)) break;
+          if (!pickB.some((m) => m.brk === l.brk || similar(m, l))) pickB.push(l);
+        }
+        if (pick[0]) { const tg = up ? res : sup, l = pick[0]; for (let k = l.a; k < n; k++) tg[k] = val(l, k); }
+        for (const l of pick) lines.push(Object.assign(l, { broken: false }));
+        for (const l of pickB) lines.push(Object.assign(l, { broken: true }));
+        // 알림: 직전 봉까지 1순위였던 선이 이번 봉에서 돌파/이탈되면
+        const prevBest = cands.filter((x) => (x.brk < 0 || x.brk === n - 1) && near(x)).sort(rank)[0];
+        if (prevBest && prevBest.brk === n - 1) {
+          const px = U.fmt(val(prevBest, n - 1), ctx && ctx.prec != null ? ctx.prec : 2);
+          out.alert = { key: side + ':' + b[prevBest.a].t + ':' + b[prevBest.c].t + ':' + b[n - 1].t, text: (up ? '저항 추세선 상향 돌파 ▲ ' : '지지 추세선 하향 이탈 ▼ ') + px };
+        }
+      }
+      return out;
+    },
+    render(R, ind, o) {
+      const I = ind.inp, ctx = R.ctx, n = R.bars.length, set = R.chart.app.set;
+      for (const l of o.lines || []) {
+        const st = R.st(l.side === 'res' ? (l.broken ? 'resB' : 'res') : l.broken ? 'supB' : 'sup');
+        if (st.vis === false) continue;
+        const val = (k) => l.pa + l.slope * (k - l.a);
+        const kEnd = l.broken ? Math.min(n - 1, l.brk + 1) : I.ext ? Math.max(n - 1, R.vTo + 1) : n - 1;
+        if (kEnd < R.vFrom || l.a > R.vTo) continue;
+        const k0 = Math.max(l.a, R.vFrom - 1), k1 = Math.min(kEnd, R.vTo + 1);
+        const step = Math.max(1, Math.floor((k1 - k0) / 80));
+        ctx.beginPath();
+        for (let k = k0; ; k += step) {
+          const kk = Math.min(k, k1), X = R.x(kk), Y = R.y(val(kk));
+          if (kk === k0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y);
+          if (kk >= k1) break;
+        }
+        ctx.strokeStyle = st.c; ctx.lineWidth = st.w || 1.5; ctx.setLineDash(l.broken ? [6, 4] : []);
+        ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = st.c;
+        for (const p of l.touches) { if (p < R.vFrom || p > R.vTo) continue; ctx.beginPath(); ctx.arc(R.x(p), R.y(val(p)), 2.6, 0, Math.PI * 2); ctx.fill(); }
+        if (l.broken && I.marks && l.brk >= R.vFrom && l.brk <= R.vTo) {
+          const bar = R.bars[l.brk], upB = l.side === 'res', col = upB ? set.up : set.dn;
+          const X = R.x(l.brk), Y = upB ? R.y(bar.l) + 6 : R.y(bar.h) - 6;
+          ctx.fillStyle = col; ctx.beginPath();
+          if (upB) { ctx.moveTo(X, Y); ctx.lineTo(X - 5, Y + 8); ctx.lineTo(X + 5, Y + 8); }
+          else { ctx.moveTo(X, Y); ctx.lineTo(X - 5, Y - 8); ctx.lineTo(X + 5, Y - 8); }
+          ctx.closePath(); ctx.fill();
+          ctx.font = '600 10px ' + CL.FONT; ctx.textAlign = 'center'; ctx.textBaseline = upB ? 'top' : 'bottom';
+          ctx.fillText(upB ? '돌파' : '이탈', X, upB ? Y + 10 : Y - 10);
+        }
+      }
+    },
+    toDrawings(ch, ind) {
+      const o = ind._o || {}, b = ch.bars, outD = [];
+      for (const l of o.lines || []) {
+        const st = ch.indStyle(ind, l.side === 'res' ? (l.broken ? 'resB' : 'res') : l.broken ? 'supB' : 'sup');
+        const val = (k) => l.pa + l.slope * (k - l.a);
+        const k2 = l.broken ? l.brk : l.c;
+        const s = Object.assign(ch.app.toolStyle('trendline'), { c: st.c, w: Math.max(1, Math.round(st.w || 2)), ls: l.broken ? 1 : 0, extR: !l.broken, extL: false });
+        outD.push({ id: U.uid(), type: 'trendline', pane: 'main', pts: [{ t: b[l.a].t, p: val(l.a) }, { t: b[k2].t, p: val(k2) }], s, locked: false, hidden: false });
+      }
+      return outD;
+    },
+  };
   IND.vpvr = {
     name: '매물대 (거래량 프로파일, 보이는 범위)', short: 'VPVR', cat: 'vol', pane: 'main', fmt: 'vol', noScale: true,
     inputs: [inp('rows', '행 개수', 'int', 24, { min: 4, max: 300 }), inp('va', '밸류 에어리어(%)', 'int', 70, { min: 10, max: 100 }), inp('width', '폭(%)', 'int', 30, { min: 5, max: 100 }), inp('side', '위치', 'sel', '오른쪽', { o: ['오른쪽', '왼쪽'] }), inp('poc', 'POC 선 표시', 'bool', true)],

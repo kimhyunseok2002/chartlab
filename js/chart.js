@@ -880,6 +880,13 @@
       try { ind._o = def.calc(this.bars, ind.inp, { tz: this.tzOff, iv: this.iv, prec: this.prec }) || {}; }
       catch (e) { console.error('지표 계산 오류', ind.type, e); ind._o = {}; }
       ind._ver = (ind._ver || 0) + 1;
+      if (def.alerts) {
+        // 새 이벤트만 알림 (불러온 직후·리플레이 중에는 울리지 않음)
+        const al = ind._o.alert;
+        if (ind.inp.alert && ind._alInit && al && al.key !== ind._alKey && !this.replay) this.app.indAlert(this, ind, al.text);
+        if (al) ind._alKey = al.key;
+        ind._alInit = true;
+      }
     }
     calcAll() { this._ha = null; for (const ind of this.inds) this.calcInd(ind); }
     addInd(type, inp, sty, silent) {
@@ -944,6 +951,7 @@
         this.noMore = !prov.more;
         if (changedSym || !this._loadedOnce) this.loadDrawings();
         this._loadedOnce = true;
+        for (const x of this.inds) x._alInit = false;
         this.calcAll();
         this.ps.main.auto = true;
         for (const k in this.ps) this.ps[k].auto = true;

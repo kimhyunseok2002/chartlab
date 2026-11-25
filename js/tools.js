@@ -1206,7 +1206,7 @@
 
   /* ===================== 툴바 그룹 ===================== */
   CL.TOOLGROUPS = [
-    { id: 'lines', name: '추세선 도구', tools: ['|선', 'trendline', 'ray', 'infoline', 'extended', 'trendangle', 'hline', 'hray', 'vline', 'crossline', '|채널', 'channel', 'regression', 'flattop', 'disjoint', '|피치포크', 'pitchfork', 'schiff', 'modschiff'] },
+    { id: 'lines', name: '추세선 도구', tools: ['|선', 'trendline', 'ray', 'infoline', 'extended', 'trendangle', 'hline', 'hray', 'vline', 'crossline', '|채널', 'channel', 'regression', 'flattop', 'disjoint', '|피치포크', 'pitchfork', 'schiff', 'modschiff', '|자동', '@autotl'] },
     { id: 'fib', name: '피보나치·간 도구', tools: ['|피보나치', 'fibret', 'fibext', 'fibchannel', 'fibtime', 'fibfan', 'fibtrendtime', 'fibcircles', 'fibspiral', 'fibarcs', 'fibwedge', 'pitchfan', '|간(Gann)', 'gannbox', 'gannsquare', 'gannfan'] },
     { id: 'pattern', name: '패턴 도구', tools: ['|차트 패턴', 'xabcd', 'cypher', 'hs', 'abcd', 'trianglepat', 'threedrives', '|엘리엇 파동', 'elliott5', 'elliottabc', 'elliotttri', 'elliottwxy', 'elliottwxyxz', '|사이클', 'cyclic', 'timecycles', 'sine'] },
     { id: 'forecast', name: '예측·측정 도구', tools: ['|포지션', 'longpos', 'shortpos', 'forecast', 'barspattern', 'ghostfeed', '|측정', 'daterange', 'pricerange', 'dprange', '|거래량 기반', 'avwap', 'fixedvp', 'anchoredvp'] },

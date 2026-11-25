@@ -210,7 +210,11 @@
       for (const g of CL.TOOLGROUPS) {
         const cur = this.lastInGroup[g.id] && g.tools.includes(this.lastInGroup[g.id]) ? this.lastInGroup[g.id] : g.tools.find((x) => x[0] !== '|');
         btn('g_' + g.id, ICON[cur] || ICON.trendline, g.name + ' — ' + T[cur].name, () => this.setTool(this.lastInGroup[g.id] && g.tools.includes(this.lastInGroup[g.id]) ? this.lastInGroup[g.id] : cur), (w) => {
-          this.flyout(w, g.tools.map((t) => (t[0] === '|' ? { head: t.slice(1) } : { icon: ICON[t], name: T[t].name, key: T[t].key, on: this.tool === t, fn: () => this.setTool(t) })), g.name);
+          this.flyout(w, g.tools.map((t) => {
+            if (t[0] === '|') return { head: t.slice(1) };
+            if (t[0] === '@') { const k = t.slice(1); return { icon: ICON[k], name: IND[k].name + ' — 지표로 추가', fn: () => { this.active.addInd(k); U.toast(IND[k].short + ' 추가됨 · 범례의 ⚙에서 조정'); } }; }
+            return { icon: ICON[t], name: T[t].name, key: T[t].key, on: this.tool === t, fn: () => this.setTool(t) };
+          }), g.name);
         });
       }
       btn('emoji', ICON.emoji, '이모지·아이콘', () => this.setTool('emoji'), (w) => this.emojiFly(w));
@@ -630,7 +634,11 @@
       if (def.inputs.length) body.append(h('div', { class: 'f-sec', text: '입력값' }));
       for (const I of def.inputs) {
         let el;
-        const on = (v) => { inp[I.k] = v; apply(); };
+        const on = (v) => {
+          inp[I.k] = v;
+          if (I.k === 'alert' && v && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+          apply();
+        };
         if (I.t === 'bool') el = h('input', { type: 'checkbox', checked: !!inp[I.k], onchange: (e) => on(e.target.checked) });
         else if (I.t === 'sel') el = h('select', { onchange: (e) => on(e.target.value) }, ...I.o.map((o) => h('option', { value: o, text: o, selected: inp[I.k] === o })));
         else if (I.t === 'src') el = h('select', { onchange: (e) => on(e.target.value) }, ...IND.SRC.map((o) => h('option', { value: o, text: SRC_LABEL[o] || o, selected: inp[I.k] === o })));
@@ -652,8 +660,17 @@
         body.append(row);
       }
       let reset = false;
+      const copyBtn = def.toDrawings ? [{
+        t: '드로잉으로 복사', fn: () => {
+          const ds = def.toDrawings(c, ind);
+          if (!ds.length) { U.toast('지금 복사할 추세선이 없습니다', 'warn'); return false; }
+          c.drawings.push(...ds); c.commit(); c.invalidate();
+          U.toast(ds.length + '개 추세선을 드로잉으로 복사했습니다 — 직접 옮기고 고칠 수 있어요');
+          return false;
+        },
+      }] : [];
       this.modal(def.name + ' 설정', body, [
-        { t: '기본값', fn: () => { reset = true; } }, '|',
+        { t: '기본값', fn: () => { reset = true; } }, ...copyBtn, '|',
         { t: '취소' },
         { t: '확인', cls: 'pri', ok: true },
       ], {
@@ -879,6 +896,7 @@
         ['Esc', '그리기 취소 · 선택 해제 · 창 닫기'], ['Enter / 더블클릭', '경로·폴리라인·고스트피드 그리기 끝내기'],
         ['Alt+T / H / J / V / C', '추세선 / 수평선 / 수평 레이 / 수직선 / 십자선'], ['Alt+F', '피보나치 되돌림'], ['Alt+Shift+R', '사각형'],
         ['Alt+R', '차트 초기화'], ['Alt+A', '가격 알림 추가'], ['← → / ↑ ↓', '봉 이동 / 확대·축소'], ['아무 글자 입력', '종목 검색 열기'],
+        ['자동 추세선', '지표 → "자동 추세선" (또는 추세선 도구 메뉴 맨 아래). ⚙에서 "드로잉으로 복사"하면 직접 수정 가능'],
       ];
       const tbl = h('div', { class: 'help-tbl' }, ...rows.map(([k, v]) => h('div', { class: 'help-row' }, h('kbd', { text: k }), h('span', { text: v }))));
       const tips = h('div', { class: 'hint', html: '데이터: 업비트·바이낸스(현물/선물)는 실시간, 주식·지수는 야후 파이낸스(약 15~20분 지연)입니다.<br>드로잉은 종목별로, 지표·레이아웃은 차트 칸별로 브라우저에 자동 저장됩니다. 설정 → 백업으로 옮길 수 있어요.' });
@@ -1039,14 +1057,20 @@
       a.fired = true; a.firedAt = Date.now();
       U.save('alerts', this.alerts);
       const txt = '🔔 ' + a.sym + ' ' + (a.cond === 'up' ? '상향 돌파 ' : a.cond === 'down' ? '하향 돌파 ' : '도달 ') + this.fmtPx(a.src, a.sym, a.price) + (a.msg ? ' — ' + a.msg : '') + ' (현재 ' + this.fmtPx(a.src, a.sym, price) + ')';
+      this.notify('ChartLab 가격 알림', txt);
+      this.charts.forEach((x) => x.invalidate());
+      this.renderPanel();
+    }
+    notify(title, txt) {
       U.toast(txt, 'alert', 8000);
-      try { if ('Notification' in window && Notification.permission === 'granted') new Notification('ChartLab 가격 알림', { body: txt }); } catch (e) {}
+      try { if ('Notification' in window && Notification.permission === 'granted') new Notification(title, { body: txt }); } catch (e) {}
       try {
         const ac = new (window.AudioContext || window.webkitAudioContext)();
         [0, 0.22].forEach((t0) => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 880; g.gain.value = 0.15; o.connect(g); g.connect(ac.destination); o.start(ac.currentTime + t0); o.stop(ac.currentTime + t0 + 0.15); });
       } catch (e) {}
-      this.charts.forEach((x) => x.invalidate());
-      this.renderPanel();
+    }
+    indAlert(c, ind, text) {
+      this.notify('ChartLab 추세선 알림', '📈 ' + (c.dispName() || c.sym) + ' ' + U.IV_LABEL[c.iv] + ' — ' + text);
     }
     startFeed() {
       let n = 0;

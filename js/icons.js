@@ -47,6 +47,7 @@
     bar: 'M9 5V22|M6 8H9|M9 18H12|M19 6V21|M16 16H19|M19 9H22', line: 'M4 20L10 12L15 16L24 6',
     area: 'aM4 20L10 12L15 16L24 6V24H4Z|M4 20L10 12L15 16L24 6', ha: 'M9 6V22|f M7 9H11V17H7Z|M19 5V21|f M17 8H21V16H17Z|t14 27 HA',
     // 선
+    autotl: 'M3 23L8 15L12 19L17 12L21 16L25 10|M3 16.7L25 9.3|o8 15 1.5|o17 12 1.5|t6 8 A',
     trendline: 'M6 22 L22 6|c6 22|c22 6', ray: 'M6 22 L24.5 3.5|c6 22|c13 15', infoline: 'M5 21L16 10|c5 21|c16 10|M17 16h7|M17 19h6|M17 22h7',
     extended: 'M2 26 L26 2|c10 18|c18 10', trendangle: 'M5 22 L21 8|M5 22 H23|M12 22 A7 7 0 0 0 10.4 17.6|c21 8',
     hline: 'M3 14 H25|c14 14', hray: 'M9 14 H26|c9 14', vline: 'M14 3 V25|c14 14', crossline: 'M14 3 V25|M3 14 H25|c14 14',
