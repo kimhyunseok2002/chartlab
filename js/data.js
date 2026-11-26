@@ -183,7 +183,7 @@
     retry() {
       this.tries++;
       clearTimeout(this.timer);
-      this.timer = setTimeout(() => { if (this.need() && !this.ws) this.connect(); }, Math.min(30000, 1500 * 2 ** Math.min(this.tries, 4)));
+      this.timer = setTimeout(() => { if (this.need() && !this.ws) this.connect(); }, Math.min(15000, 1500 * 2 ** Math.min(this.tries, 4)));
     },
   };
   Data.upbitWS = UPWS;
