@@ -1,4 +1,4 @@
-/* ChartLab — drawing.js : 드로잉 프레임워크 (그리기 기록기 Gfx, 적중 판정, 생성·편집 상호작용) */
+/* TradingHyun — drawing.js : 드로잉 프레임워크 (그리기 기록기 Gfx, 적중 판정, 생성·편집 상호작용) */
 (function () {
   'use strict';
   const CL = window.CL, U = CL.U, DASH = CL.DASH, Chart = CL.Chart;

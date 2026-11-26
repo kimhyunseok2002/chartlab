@@ -1,4 +1,4 @@
-/* ChartLab — tools.js : 드로잉 도구 정의 (선·피치포크·피보나치·간·패턴·엘리엇·사이클·예측/측정·도형·주석) */
+/* TradingHyun — tools.js : 드로잉 도구 정의 (선·피치포크·피보나치·간·패턴·엘리엇·사이클·예측/측정·도형·주석) */
 (function () {
   'use strict';
   const CL = window.CL, U = CL.U, TA = CL.TA;

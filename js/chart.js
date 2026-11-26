@@ -1,4 +1,4 @@
-/* ChartLab — chart.js : 캔버스 차트 엔진 (패널·스케일·시리즈·지표·축·크로스헤어·입력) */
+/* TradingHyun — chart.js : 캔버스 차트 엔진 (패널·스케일·시리즈·지표·축·크로스헤어·입력) */
 (function () {
   'use strict';
   const CL = window.CL, U = CL.U, IND = CL.IND, Data = CL.Data;
@@ -801,7 +801,8 @@
       this._lgTitle = U.h('span', { class: 'lg-title', title: '종목 검색', onclick: () => this.app.openSearch(this) });
       this._lgOHLC = U.h('span', { class: 'lg-ohlc' });
       this._lgStat = U.h('span', { class: 'lg-stat' });
-      main.append(U.h('div', { class: 'lg-row lg-sym' }, this._lgTitle, this._lgStat, this._lgOHLC));
+      const logo = CL.Logo ? CL.Logo.el(this.src, this.sym, 18, this.dispName()) : null;
+      main.append(U.h('div', { class: 'lg-row lg-sym' }, logo, this._lgTitle, this._lgStat, this._lgOHLC));
       for (const ind of this.inds) {
         const sub = IND.paneOf(ind.type, ind.inp) === 'sub';
         const box = sub ? mk(ind.id) : main;
@@ -826,6 +827,8 @@
     dispName() {
       const n = this.app.names && this.app.names[this.key];
       if (n) return n;
+      const w = this.app.wl && this.app.wl.nameOf(this.src, this.sym);
+      if (w) return w;
       return this.meta && this.meta.name && this.src === 'stock' ? this.meta.name : '';
     }
     updateLegend() {
@@ -833,8 +836,8 @@
       for (const p of this.panes) { const b = this._lgBox[p.key]; if (b) { const t = p.top + 4 + 'px'; if (b.style.top !== t) b.style.top = t; } }
       const n = this.bars.length;
       const prov = Data.get(this.src);
-      const nm = this.dispName() || this.sym;
-      const title = nm + (nm !== this.sym ? ' (' + this.sym + ')' : '') + ' · ' + U.IV_LABEL[this.iv] + ' · ' + (prov ? prov.name : this.src);
+      const nm = this.dispName(), tk = CL.tickOf ? CL.tickOf(this.src, this.sym) : this.sym;
+      const title = (nm && nm !== this.sym ? nm + ' (' + tk + ')' : tk) + ' · ' + U.IV_LABEL[this.iv] + ' · ' + (prov ? prov.name : this.src);
       if (this._lgTitle.textContent !== title) this._lgTitle.textContent = title;
       const st = this.replay ? '리플레이' : this.status === 'live' || this.status === 'resync' ? '실시간' : this.status === 'poll' ? '지연' : this.status === 'reconnect' ? '재연결…' : '';
       if (this._lgStat.textContent !== st) { this._lgStat.textContent = st; this._lgStat.className = 'lg-stat ' + (this.status || ''); }

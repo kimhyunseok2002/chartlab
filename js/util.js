@@ -1,4 +1,4 @@
-/* ChartLab — util.js : 공용 헬퍼 (포맷, 시간, 기하, 저장소, DOM) */
+/* TradingHyun — util.js : 공용 헬퍼 (포맷, 시간, 기하, 저장소, DOM) */
 (function () {
   'use strict';
   const CL = (window.CL = window.CL || {});

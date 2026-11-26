@@ -1,4 +1,4 @@
-/* ChartLab — data.js : 데이터 소스 (바이낸스 현물/선물, 업비트, 주식(야후·네이버 via 로컬 서버), CSV, 데모) */
+/* TradingHyun — data.js : 데이터 소스 (바이낸스 현물/선물, 업비트, 주식(야후·네이버 via 로컬 서버), CSV, 데모) */
 (function () {
   'use strict';
   const CL = window.CL, U = CL.U;
@@ -93,8 +93,9 @@
         const out = {};
         await Promise.all(syms.map(async (s) => {
           try {
-            const t = await this.get(o.tick1 + encodeURIComponent(s));
-            out[s] = { last: +t.lastPrice, chg: +t.priceChangePercent };
+            const r = await this.get(o.kl + '?symbol=' + encodeURIComponent(s) + '&interval=1d&limit=1');
+            const k = r[r.length - 1];
+            if (k) out[s] = { last: +k[4], base: +k[1], open: +k[1], high: +k[2], low: +k[3], vol: +k[5], qv: +k[7] };
           } catch (e) {}
         }));
         return out;
@@ -119,7 +120,16 @@
   // 그래서 배포 사이트에서는 REST를 /api/upbit 프록시로 보내고, 웹소켓은 모든 차트가 연결 하나를 공유한다.
   const UP_PROXY = !(location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname));
   const UPWS = {
-    ws: null, subs: new Map(), open: false, tries: 0, timer: 0, st: 0, dec: new TextDecoder(),
+    ws: null, subs: new Map(), tick: new Set(), onTicker: null, open: false, tries: 0, timer: 0, st: 0, dec: new TextDecoder(),
+    need() { return this.subs.size > 0 || this.tick.size > 0; },
+    /* 관심종목 시세(ticker) 구독 목록 — 체결(trade) 구독과 같은 연결로 보낸다 */
+    setTickers(codes) {
+      const k = codes.slice().sort().join(',');
+      if (k === this._tk) return;
+      this._tk = k;
+      this.tick = new Set(codes);
+      this.sync();
+    },
     add(code, sub) {
       let s = this.subs.get(code);
       if (!s) { s = new Set(); this.subs.set(code, s); }
@@ -132,7 +142,7 @@
     sync() {
       clearTimeout(this.st);
       this.st = setTimeout(() => {
-        if (!this.subs.size) {
+        if (!this.need()) {
           clearTimeout(this.timer);
           if (this.ws) { const w = this.ws; this.ws = null; this.open = false; w.onclose = null; try { w.close(); } catch (e) {} }
           return;
@@ -140,7 +150,13 @@
         if (!this.ws) this.connect(); else if (this.open) this.req();
       }, 40);
     },
-    req() { try { this.ws.send(JSON.stringify([{ ticket: 'cl-' + U.uid() }, { type: 'trade', codes: Array.from(this.subs.keys()) }, { format: 'SIMPLE' }])); } catch (e) {} },
+    req() {
+      const m = [{ ticket: 'cl-' + U.uid() }];
+      if (this.subs.size) m.push({ type: 'trade', codes: Array.from(this.subs.keys()) });
+      if (this.tick.size) m.push({ type: 'ticker', codes: Array.from(this.tick) });
+      m.push({ format: 'SIMPLE' });
+      try { this.ws.send(JSON.stringify(m)); } catch (e) {}
+    },
     connect() {
       clearTimeout(this.timer);
       let ws;
@@ -151,24 +167,52 @@
       ws.onmessage = (ev) => {
         let m;
         try { m = JSON.parse(typeof ev.data === 'string' ? ev.data : this.dec.decode(ev.data)); } catch (e) { return; }
-        if (!m || m.ty !== 'trade') return;
-        const s = this.subs.get(m.cd);
-        if (s) for (const sub of s) sub.trade(m.tp, m.tv, m.ttms);
+        if (!m) return;
+        if (m.ty === 'trade') {
+          const s = this.subs.get(m.cd);
+          if (s) for (const sub of s) sub.trade(m.tp, m.tv, m.ttms);
+        } else if (m.ty === 'ticker' && this.onTicker) this.onTicker(m);
       };
       ws.onclose = () => {
         if (this.ws !== ws) return;
         this.ws = null; this.open = false;
-        if (this.subs.size) { this.each((s) => s.status && s.status('reconnect')); this.retry(); }
+        if (this.need()) { this.each((s) => s.status && s.status('reconnect')); this.retry(); }
       };
       ws.onerror = () => { try { ws.close(); } catch (e) {} };
     },
     retry() {
       this.tries++;
       clearTimeout(this.timer);
-      this.timer = setTimeout(() => { if (this.subs.size && !this.ws) this.connect(); }, Math.min(30000, 1500 * 2 ** Math.min(this.tries, 4)));
+      this.timer = setTimeout(() => { if (this.need() && !this.ws) this.connect(); }, Math.min(30000, 1500 * 2 ** Math.min(this.tries, 4)));
     },
   };
   Data.upbitWS = UPWS;
+
+  /* 바이낸스 관심종목 시세: 일봉(kline_1d) 결합 스트림 하나 — 변동률은 트레이딩뷰처럼 오늘 일봉 시가 기준 */
+  function binStream(base) {
+    const S = {
+      syms: new Set(), key: '', ws: null, timer: 0, onK: null,
+      set(list) {
+        const k = list.slice().sort().join(',');
+        if (k === S.key) return;
+        S.key = k; S.syms = new Set(list);
+        clearTimeout(S.timer); S.timer = setTimeout(S.open, 300);
+      },
+      open() {
+        if (S.ws) { const w = S.ws; S.ws = null; w.onclose = null; try { w.close(); } catch (e) {} }
+        if (!S.syms.size) return;
+        let ws;
+        try { ws = new WebSocket(base + Array.from(S.syms).map((s) => s.toLowerCase() + '@kline_1d').join('/')); }
+        catch (e) { S.timer = setTimeout(S.open, 5000); return; }
+        S.ws = ws;
+        ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } const d = m && m.data; if (d && d.k && S.onK) S.onK(d.s, d.k); };
+        ws.onclose = () => { if (S.ws !== ws) return; S.ws = null; clearTimeout(S.timer); S.timer = setTimeout(S.open, 4000); };
+        ws.onerror = () => { try { ws.close(); } catch (e) {} };
+      },
+    };
+    return S;
+  }
+  Data.binStreams = { binance: binStream('wss://data-stream.binance.vision/stream?streams='), binancef: binStream('wss://fstream.binance.com/stream?streams=') };
   P.upbit = {
     id: 'upbit', name: '업비트', short: 'UPBIT', kind: 'crypto', more: true,
     host: 'https://api.upbit.com/v1',
@@ -266,10 +310,17 @@
     async quotes(syms) {
       const out = {};
       if (!syms.length) return out;
-      try {
-        const r = await this.get('/ticker?markets=' + syms.map(encodeURIComponent).join(','));
-        for (const t of r) out[t.market] = { last: t.trade_price, chg: t.signed_change_rate * 100 };
-      } catch (e) {}
+      const put = (t) => {
+        out[t.market] = {
+          last: t.trade_price, base: t.prev_closing_price, open: t.opening_price, high: t.high_price, low: t.low_price,
+          vol: t.acc_trade_volume, qv: t.acc_trade_price, w52h: t.highest_52_week_price, w52l: t.lowest_52_week_price,
+        };
+      };
+      try { (await this.get('/ticker?markets=' + syms.map(encodeURIComponent).join(','))).forEach(put); }
+      catch (e) {
+        // 상장폐지 등 잘못된 마켓이 하나라도 섞이면 업비트가 요청 전체를 거부하므로 하나씩 다시
+        if (syms.length > 1) await Promise.all(syms.map(async (s) => { try { (await this.get('/ticker?markets=' + encodeURIComponent(s))).forEach(put); } catch (er) {} }));
+      }
       return out;
     },
   };
@@ -371,8 +422,15 @@
     },
     async quotes(syms) {
       if (!syms.length || location.protocol === 'file:') return {};
-      try { return (await getJSON('/api/quote?symbols=' + syms.map(encodeURIComponent).join(','))).quotes || {}; }
-      catch (e) { return {}; }
+      try {
+        const q = (await getJSON('/api/quote?symbols=' + syms.map(encodeURIComponent).join(','))).quotes || {};
+        const out = {};
+        for (const s in q) {
+          const x = q[s];
+          out[s] = Object.assign({}, x, { base: x.prev != null ? x.prev : x.chg != null && x.last ? x.last / (1 + x.chg / 100) : null });
+        }
+        return out;
+      } catch (e) { return {}; }
     },
   };
 
@@ -551,5 +609,23 @@
     const p = P[src];
     if (!p || !p.quotes) return {};
     return p.quotes(syms);
+  };
+  /* 상세 정보용 일봉 약 1~2년치 (10분 캐시) */
+  Data._daily = {};
+  Data.daily = async function (src, sym) {
+    const k = src + ':' + sym, c = Data._daily[k];
+    if (c && Date.now() - c.t < 6e5) return c.bars;
+    let bars = [];
+    if (src === 'upbit') {
+      const p = P.upbit;
+      const a = (await p.get('/candles/days?market=' + encodeURIComponent(sym) + '&count=200')).map(p.parse).reverse();
+      let older = [];
+      if (a.length === 200) older = (await p.get('/candles/days?market=' + encodeURIComponent(sym) + '&count=200&to=' + encodeURIComponent(new Date(a[0].t).toISOString().slice(0, 19) + 'Z'))).map(p.parse).reverse();
+      bars = older.concat(a);
+    } else if (src === 'binance' || src === 'binancef') bars = await P[src].fetch(sym, '1D');
+    else if (src === 'stock') bars = await P.stock.chart(sym, '1D', '&range=2y');
+    else if (P[src]) bars = await P[src].fetch(sym, '1D').catch(() => []);
+    Data._daily[k] = { t: Date.now(), bars };
+    return bars;
   };
 })();

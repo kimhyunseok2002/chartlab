@@ -1,4 +1,4 @@
-/* ChartLab — icons.js : SVG 아이콘 (28×28) */
+/* TradingHyun — icons.js : SVG 아이콘 (28×28) */
 (function () {
   'use strict';
   const CL = (window.CL = window.CL || {});
@@ -33,6 +33,7 @@
     tree: 'M5 6h5|M5 6v14|M5 13h5|M5 20h5|M13 6h10|M13 13h10|M13 20h10',
     gear: 'c14 14 3.4|M14 4v3.2|M14 20.8V24|M4 14h3.2|M20.8 14H24|M6.9 6.9l2.3 2.3|M18.8 18.8l2.3 2.3|M6.9 21.1l2.3-2.3|M18.8 9.2l2.3-2.3',
     close: 'M8 8L20 20|M20 8L8 20', up: 'M8 17L14 11L20 17', down: 'M8 11L14 17L20 11', plus: 'M14 6V22|M6 14H22',
+    sec: 'M5 7H23|M9 12H23|M9 17H23|M9 22H23|M5 12V22', dots: 'o8 14 1.6|o14 14 1.6|o20 14 1.6',
     undo: 'M9 10H17 A5.5 5.5 0 0 1 17 21 H10|M12.5 6.5 L9 10 L12.5 13.5', redo: 'M19 10H11 A5.5 5.5 0 0 0 11 21 H18|M15.5 6.5 L19 10 L15.5 13.5',
     camera: 'M4 9H9.2L11 6H17L18.8 9H24V22H4Z|c14 15 4', ind: 'M4 20 L9 12 L13 16 L19 7 L24 11|M4 24H24',
     layout: 'M4 5H24V23H4Z|M14 5V23|M4 14H24', replay: 'f M13 7 L5 14 L13 21 Z|f M22 7 L14 14 L22 21 Z',
@@ -94,5 +95,10 @@
   };
   const ICON = (CL.ICON = {});
   for (const k in S) ICON[k] = svg(S[k]);
+  /* TradingHyun 마크: 검정 바탕 + 흰색 'H' (오른쪽 기둥이 더 높고 가로획이 상승선) — 오리지널 디자인 */
+  CL.BRAND = {
+    name: 'TradingHyun',
+    mark: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#000"/><path fill="#fff" d="M6 12h5v14H6zM21 6h5v20h-5zM11 18l10-6v5l-10 6z"/></svg>',
+  };
   ICON.arrowCurFix = ICON.arrowCur;
 })();

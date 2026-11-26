@@ -12,7 +12,14 @@ async function one(s) {
     let prev = null;
     for (let i = close.length - 2; i >= 0; i--) if (close[i] != null) { prev = close[i]; break; }
     if (prev == null) prev = res.meta.previousClose || res.meta.chartPreviousClose;
-    return { last, chg: prev ? ((last - prev) / prev) * 100 : null };
+    const m = res.meta, reg = (m.currentTradingPeriod && m.currentTradingPeriod.regular) || {}, now = Date.now() / 1000;
+    return {
+      last, chg: prev ? ((last - prev) / prev) * 100 : null, prev,
+      high: m.regularMarketDayHigh, low: m.regularMarketDayLow, vol: m.regularMarketVolume,
+      w52h: m.fiftyTwoWeekHigh, w52l: m.fiftyTwoWeekLow, cur: m.currency,
+      name: m.longName || m.shortName, ex: m.fullExchangeName || m.exchangeName,
+      mopen: !!(reg.start && reg.end && reg.start <= now && now <= reg.end),
+    };
   } catch (e) { return null; }
 }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""ChartLab 로컬 서버
+"""TradingHyun 로컬 서버
 
 - 정적 파일(index.html, js, css) 제공
 - 주식·지수 데이터 프록시: 야후 파이낸스 차트 API, 야후/네이버 종목 검색
@@ -210,7 +210,15 @@ def quote(syms):
             if last is None:
                 return s, None
             chg = (last - prev) / prev * 100 if prev else None
-            return s, {'last': last, 'chg': chg}
+            reg = (m.get('currentTradingPeriod') or {}).get('regular') or {}
+            now = time.time()
+            return s, {
+                'last': last, 'chg': chg, 'prev': prev,
+                'high': m.get('regularMarketDayHigh'), 'low': m.get('regularMarketDayLow'), 'vol': m.get('regularMarketVolume'),
+                'w52h': m.get('fiftyTwoWeekHigh'), 'w52l': m.get('fiftyTwoWeekLow'), 'cur': m.get('currency'),
+                'name': m.get('longName') or m.get('shortName'), 'ex': m.get('fullExchangeName') or m.get('exchangeName'),
+                'mopen': bool(reg.get('start') and reg.get('end') and reg['start'] <= now <= reg['end']),
+            }
         except Exception:
             return s, None
 
@@ -284,7 +292,7 @@ def main():
             try:  # 이미 ChartLab이 떠 있으면 그 창만 열기
                 with urllib.request.urlopen('http://127.0.0.1:%d/api/ping' % p, timeout=1) as r:
                     if json.loads(r.read().decode()).get('app') == 'chartlab':
-                        print('ChartLab 이 이미 실행 중입니다: http://127.0.0.1:%d' % p)
+                        print('TradingHyun 이 이미 실행 중입니다: http://127.0.0.1:%d' % p)
                         if browser:
                             webbrowser.open('http://127.0.0.1:%d' % p)
                         return
@@ -295,7 +303,7 @@ def main():
         sys.exit(1)
     url = 'http://127.0.0.1:%d' % port
     print('=' * 52)
-    print('  ChartLab 실행 중:  ' + url)
+    print('  TradingHyun 실행 중:  ' + url)
     print('  이 창을 닫으면 서버가 종료됩니다 (Ctrl+C)')
     print('=' * 52)
     if browser:

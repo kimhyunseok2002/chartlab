@@ -1,4 +1,4 @@
-/* ChartLab — app.js : 화면 구성 (상단바·도구모음·검색·지표·설정·관심종목·알림·리플레이·레이아웃) */
+/* TradingHyun — app.js : 화면 구성 (상단바·도구모음·검색·지표·설정·관심종목·알림·리플레이·레이아웃) */
 (function () {
   'use strict';
   const CL = window.CL, U = CL.U, IND = CL.IND, Data = CL.Data, ICON = CL.ICON, T = CL.TOOLS;
@@ -43,18 +43,17 @@
       this.toolDefaults = U.load('toolDefaults', {});
       this.lastInGroup = U.load('lastInGroup', {});
       this.alerts = U.load('alerts', []);
-      this.watch = U.load('watch', [
-        { src: 'upbit', sym: 'KRW-BTC', name: '비트코인' }, { src: 'upbit', sym: 'KRW-ETH', name: '이더리움' }, { src: 'upbit', sym: 'KRW-XRP', name: '리플' },
-        { src: 'binance', sym: 'BTCUSDT', name: 'BTCUSDT' }, { src: 'binance', sym: 'ETHUSDT', name: 'ETHUSDT' }, { src: 'binance', sym: 'SOLUSDT', name: 'SOLUSDT' },
-      ]);
-      this.quotes = {}; this.lastPx = {};
+      this.lastPx = {};
       this.names = U.load('names', {});
       this.charts = []; this.active = null; this.modals = [];
       this.emojiPick = '🚀';
       this.server = false;
       this.el = {
-        top: U.$('#top'), left: U.$('#left'), charts: U.$('#charts'), right: U.$('#right'), status: U.$('#status'),
+        top: U.$('#top'), left: U.$('#left'), charts: U.$('#charts'), panel: U.$('#rpanel'), rbar: U.$('#rbar'), status: U.$('#status'),
       };
+      this.wl = new CL.Watchlist(this);
+      // 시세 허브 → 가격 알림 확인
+      CL.Quotes.on((keys) => { for (const k of keys) { const q = CL.Quotes.get(k); if (q && q.last != null) { const i = k.indexOf(':'); this.priceUpdate(k.slice(0, i), k.slice(i + 1), q.last); } } });
       this.applyTheme(true);
       this.buildLeft();
       this.buildTop();
@@ -63,8 +62,15 @@
       this.bindKeys();
       this.setLayout(this.set.layout || '1');
       this.checkServer();
-      this.startFeed();
+      this.trackQuotes();
       window.addEventListener('beforeunload', () => { for (const c of this.charts) this.saveSlotNow(c); });
+    }
+    /* 실시간으로 받아야 할 종목: 보이는 관심종목 + 대기 중인 알림 + 상세 정보 */
+    trackQuotes() {
+      const keys = this.wl.keys();
+      for (const a of this.alerts) if (a.active && !a.fired) keys.push(a.src + ':' + a.sym);
+      if (this.wl.sel) keys.push(this.wl.sel);
+      CL.Quotes.track(keys);
     }
 
     /* ================= 설정 ================= */
@@ -149,14 +155,15 @@
     }
     onChartLoaded(c) {
       if (c === this.active) this.refreshTop();
-      if (c.bars.length) this.priceUpdate(c.src, c.sym, c.bars[c.bars.length - 1].c);
-      this.renderPanel();
+      if (c.bars.length && !CL.Quotes.get(c.key)) CL.Quotes.put(c.key, { last: c.bars[c.bars.length - 1].c });
+      this.wl.onChartLoaded(c);
+      if (this.set.panelTab === 'tree') this.renderPanel();
     }
     onTick(c, b) {
-      this.priceUpdate(c.src, c.sym, b.c);
+      if (!c.replay) CL.Quotes.put(c.key, { last: b.c });
       if (c === this.active && !c.replay) {
         const now = Date.now();
-        if (!this._tT || now - this._tT > 1000) { this._tT = now; document.title = c.sym + ' ' + U.fmt(b.c, c.prec) + ' — ChartLab'; }
+        if (!this._tT || now - this._tT > 1000) { this._tT = now; document.title = (CL.tickOf ? CL.tickOf(c.src, c.sym) : c.sym) + ' ' + U.fmt(b.c, c.prec) + ' — TradingHyun'; }
       }
     }
     onDrawingsChanged(c) {
@@ -304,7 +311,7 @@
       const T0 = this.el.top;
       T0.innerHTML = '';
       this.tb = {};
-      const logo = h('div', { class: 'logo', title: 'ChartLab' }, h('span', { class: 'logo-m', text: 'C' }), h('span', { class: 'logo-t', text: 'ChartLab' }));
+      const logo = h('div', { class: 'logo', title: CL.BRAND.name }, h('span', { class: 'logo-m', html: CL.BRAND.mark }), h('span', { class: 'logo-t', text: CL.BRAND.name }));
       this.tb.sym = h('button', { class: 'tbtn sym', title: '종목 검색 (아무 글자나 입력해도 열림)', onclick: () => this.openSearch() });
       const ivBox = h('div', { class: 'ivs' });
       this.tb.iv = {};
@@ -324,16 +331,20 @@
       const set = h('button', { class: 'tbtn ic', title: '설정', html: ICON.gear, onclick: () => this.openSettings() });
       const help = h('button', { class: 'tbtn ic help', title: '단축키·사용법', text: '?', onclick: () => this.openHelp() });
       const full = h('button', { class: 'tbtn ic', title: '전체 화면', html: ICON.full, onclick: () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); } });
-      const pan = h('button', { class: 'tbtn ic', title: '오른쪽 패널 (관심종목·알림·객체)', html: ICON.list, onclick: () => { this.set.panel = !this.set.panel; this.saveSet(); this.renderPanel(); } });
       const sep = () => h('div', { class: 'tsep' });
-      T0.append(logo, sep(), this.tb.sym, sep(), ivBox, sep(), this.tb.type, ind, sep(), lay, this.tb.undo, this.tb.redo, sep(), rep, alert, sp, help, shot, theme, set, full, pan);
+      T0.append(logo, sep(), this.tb.sym, sep(), ivBox, sep(), this.tb.type, ind, sep(), lay, this.tb.undo, this.tb.redo, sep(), rep, alert, sp, help, shot, theme, set, full);
     }
     refreshTop() {
       const c = this.active;
       if (!c || !this.tb) return;
       const prov = Data.get(c.src);
       const nm = c.dispName();
-      this.tb.sym.innerHTML = '<span class="ic">' + ICON.search + '</span><b>' + U.esc(c.sym) + '</b>' + (nm ? '<span class="sym-n">' + U.esc(nm) + '</span>' : '') + '<span class="sym-s">' + (prov ? prov.name : c.src) + '</span>';
+      const sk = c.key + '|' + nm;
+      if (this._topKey !== sk) {
+        this._topKey = sk;
+        this.tb.sym.innerHTML = '';
+        this.tb.sym.append(...[CL.Logo.el(c.src, c.sym, 20, nm), h('b', { text: CL.tickOf(c.src, c.sym) }), nm ? h('span', { class: 'sym-n', text: nm }) : null, h('span', { class: 'sym-s', text: prov ? prov.name : c.src })].filter(Boolean));
+      }
       for (const iv of FAV_IV) {
         const b = this.tb.iv[iv];
         b.classList.toggle('on', c.iv === iv);
@@ -422,7 +433,7 @@
           this.setTool('cursor');
           return;
         }
-        if (typing || this.modals.length) return;
+        if (typing || this.modals.length || (e.target.closest && e.target.closest('.wl-list'))) return;
         const c = this.active;
         if (!c) return;
         const k = e.key.toLowerCase();
@@ -505,8 +516,9 @@
     }
 
     /* ================= 종목 검색 ================= */
-    openSearch(c, initial) {
+    openSearch(c, initial, opts) {
       c = c || this.active;
+      opts = opts || {};
       const tabs = [['all', '전체'], ['upbit', '업비트'], ['binance', '바이낸스'], ['binancef', '바이낸스 선물'], ['stock', '주식·지수'], ['csv', 'CSV'], ['demo', '데모']];
       let src = 'all', items = [], hi = 0, token = 0;
       const input = h('input', { class: 's-in', placeholder: '종목 검색 — 비트코인, BTC, 삼성전자, 005930, AAPL, 코스피…', value: initial || '' });
@@ -518,21 +530,36 @@
         for (const [k, n] of tabs) tabBox.append(h('button', { class: 's-tab' + (src === k ? ' on' : ''), text: n, onclick: () => { src = k; renderTabs(); run(); input.focus(); } }));
       };
       const pick = (it) => {
-        m.close(true);
         const nm = String(it.name || '').split(' · ')[0].trim();
         if (nm && nm !== it.symbol && it.source !== 'csv' && it.source !== 'demo') { this.names[it.source + ':' + it.symbol] = nm; U.save('names', this.names); }
+        if (opts.add) {
+          const added = opts.add(it);
+          U.toast(added === false ? '이미 목록에 있습니다' : CL.tickOf(it.source, it.symbol) + ' 추가됨', '', 1400);
+          render(); input.focus();
+          return;
+        }
+        m.close(true);
         let iv = c.iv;
         if (!Data.supports(it.source, iv, it.symbol)) iv = it.source === 'csv' ? (Data.get('csv').get(it.symbol) || {}).iv || '1D' : '1D';
         c.load(it.source, it.symbol, iv);
         this.saveSlot(c);
         this.refreshTop();
       };
+      const highlight = () => {
+        U.$$('.s-row', list).forEach((r, k) => r.classList.toggle('hi', k === hi));
+        const r = U.$$('.s-row', list)[hi];
+        if (r) r.scrollIntoView({ block: 'nearest' });
+      };
       const render = () => {
         list.innerHTML = '';
         if (!items.length) { list.append(h('div', { class: 's-empty', text: '결과가 없습니다' })); return; }
         items.forEach((it, i) => {
-          list.append(h('div', { class: 's-row' + (i === hi ? ' hi' : ''), onclick: () => pick(it), onmouseenter: () => { hi = i; U.$$('.s-row', list).forEach((r, k) => r.classList.toggle('hi', k === i)); } },
-            h('span', { class: 's-sym', text: it.symbol }), h('span', { class: 's-name', text: it.name || '' }), h('span', { class: 's-ex', text: it.ex || '' }), h('span', { class: 's-src src-' + it.source, text: SRC_NAMES[it.source] || it.source })));
+          const added = opts.has && opts.has(it);
+          list.append(h('div', { class: 's-row' + (i === hi ? ' hi' : '') + (added ? ' added' : ''), onclick: () => pick(it), onmouseenter: () => { hi = i; highlight(); } },
+            CL.Logo.el(it.source, it.symbol, 22, String(it.name || '').split(' · ')[0]),
+            h('span', { class: 's-sym', text: it.symbol }), h('span', { class: 's-name', text: it.name || '' }), h('span', { class: 's-ex', text: it.ex || '' }),
+            h('span', { class: 's-src src-' + it.source, text: SRC_NAMES[it.source] || it.source }),
+            opts.add ? h('span', { class: 's-add', text: added ? '✓' : '+' }) : null));
         });
       };
       const run = U.debounce(async () => {
@@ -564,11 +591,11 @@
       }, 220);
       input.addEventListener('input', run);
       input.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowDown') { hi = Math.min(items.length - 1, hi + 1); render(); e.preventDefault(); }
-        else if (e.key === 'ArrowUp') { hi = Math.max(0, hi - 1); render(); e.preventDefault(); }
+        if (e.key === 'ArrowDown') { hi = Math.min(items.length - 1, hi + 1); highlight(); e.preventDefault(); }
+        else if (e.key === 'ArrowUp') { hi = Math.max(0, hi - 1); highlight(); e.preventDefault(); }
         else if (e.key === 'Enter') { if (items[hi]) pick(items[hi]); e.preventDefault(); }
       });
-      const m = this.modal('종목 검색', h('div', { class: 's-wrap' }, input, tabBox, extra, list), null, { cls: 'm-search' });
+      const m = this.modal(opts.title || '종목 검색', h('div', { class: 's-wrap' }, input, tabBox, extra, list), opts.add ? [{ t: '완료', cls: 'pri', ok: true }] : null, { cls: 'm-search' });
       renderTabs(); run();
       setTimeout(() => { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 10);
     }
@@ -907,7 +934,7 @@
       const out = {};
       for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('cl.')) out[k] = localStorage.getItem(k); }
       const blob = new Blob([JSON.stringify(out)], { type: 'application/json' });
-      const a = h('a', { href: URL.createObjectURL(blob), download: 'chartlab-backup-' + U.fmtDate(Date.now()) + '.json' });
+      const a = h('a', { href: URL.createObjectURL(blob), download: 'tradinghyun-backup-' + U.fmtDate(Date.now()) + '.json' });
       document.body.append(a); a.click(); a.remove();
       U.toast('백업 파일을 저장했습니다');
     }
@@ -1029,6 +1056,7 @@
           if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
           U.toast('알림 등록: ' + c.sym + ' ' + U.fmt(v, c.prec));
           this.charts.forEach((x) => x.invalidate());
+          this.trackQuotes();
           this.renderPanel();
         },
       }]);
@@ -1036,8 +1064,6 @@
     }
     priceUpdate(src, sym, price) {
       const k = src + ':' + sym;
-      const q = this.quotes[k] || (this.quotes[k] = {});
-      q.last = price;
       const prev = this.lastPx[k];
       this.lastPx[k] = price;
       if (prev == null || prev === price) return;
@@ -1057,8 +1083,9 @@
       a.fired = true; a.firedAt = Date.now();
       U.save('alerts', this.alerts);
       const txt = '🔔 ' + a.sym + ' ' + (a.cond === 'up' ? '상향 돌파 ' : a.cond === 'down' ? '하향 돌파 ' : '도달 ') + this.fmtPx(a.src, a.sym, a.price) + (a.msg ? ' — ' + a.msg : '') + ' (현재 ' + this.fmtPx(a.src, a.sym, price) + ')';
-      this.notify('ChartLab 가격 알림', txt);
+      this.notify(CL.BRAND.name + ' 가격 알림', txt);
       this.charts.forEach((x) => x.invalidate());
+      this.trackQuotes();
       this.renderPanel();
     }
     notify(title, txt) {
@@ -1070,71 +1097,55 @@
       } catch (e) {}
     }
     indAlert(c, ind, text) {
-      this.notify('ChartLab 추세선 알림', '📈 ' + (c.dispName() || c.sym) + ' ' + U.IV_LABEL[c.iv] + ' — ' + text);
-    }
-    startFeed() {
-      let n = 0;
-      const tick = async () => {
-        n++;
-        const groups = {};
-        const add = (src, sym) => { (groups[src] || (groups[src] = new Set())).add(sym); };
-        if (this.set.panel) for (const w of this.watch) add(w.src, w.sym);
-        for (const a of this.alerts) if (a.active && !a.fired) add(a.src, a.sym);
-        for (const src in groups) {
-          if (src === 'csv' || src === 'demo') continue;
-          if (src === 'stock' && (n % 5 !== 1 || !this.server)) continue;
-          try {
-            const q = await Data.quotes(src, Array.from(groups[src]));
-            for (const sym in q) { const k = src + ':' + sym; this.quotes[k] = Object.assign(this.quotes[k] || {}, q[sym]); this.priceUpdate(src, sym, q[sym].last); }
-          } catch (e) {}
-        }
-        this.renderWatchPrices();
-      };
-      setTimeout(tick, 1500);
-      setInterval(tick, 4000);
+      this.notify(CL.BRAND.name + ' 추세선 알림', '📈 ' + (c.dispName() || c.sym) + ' ' + U.IV_LABEL[c.iv] + ' — ' + text);
     }
 
-    /* ================= 오른쪽 패널 ================= */
+    /* ================= 오른쪽 패널 (트레이딩뷰처럼 맨 오른쪽 아이콘 바 + 크기 조절 패널) ================= */
     buildRight() {
-      const R = this.el.right;
-      R.innerHTML = '';
-      this.rp = {};
-      const tabs = h('div', { class: 'rp-tabs' });
-      for (const [k, n] of [['watch', '관심종목'], ['alerts', '알림'], ['tree', '객체 트리']]) {
-        const b = h('button', { class: 'rp-tab', text: n, onclick: () => { this.set.panelTab = k; this.saveSet(); this.renderPanel(); } });
-        b.dataset.k = k;
-        tabs.append(b);
+      const P = this.el.panel, B = this.el.rbar;
+      P.innerHTML = ''; B.innerHTML = '';
+      this.rp = { btn: {} };
+      for (const [k, n, ic] of [['watch', '관심종목', ICON.list], ['alerts', '알림', ICON.bell], ['tree', '객체 트리', ICON.tree]]) {
+        const b = h('button', { class: 'rb-btn', title: n, html: ic, onclick: () => {
+          if (this.set.panel && this.set.panelTab === k) this.set.panel = false; else { this.set.panel = true; this.set.panelTab = k; }
+          this.saveSet(); this.renderPanel(true);
+        } });
+        this.rp.btn[k] = b;
+        B.append(b);
       }
-      tabs.append(h('button', { class: 'rp-x', html: ICON.close, title: '패널 닫기', onclick: () => { this.set.panel = false; this.saveSet(); this.renderPanel(); } }));
+      const rz = h('div', { class: 'rp-resize', title: '드래그해서 패널 너비 조절' });
+      rz.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        const x0 = e.clientX, w0 = P.offsetWidth;
+        document.body.classList.add('resizing');
+        const mv = (ev) => { this.set.rpw = U.clamp(w0 - (ev.clientX - x0), 240, Math.min(640, innerWidth - 400)); document.documentElement.style.setProperty('--rpw', this.set.rpw + 'px'); this.charts.forEach((c) => c.resize()); };
+        const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); document.body.classList.remove('resizing'); this.saveSet(); };
+        window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+      });
+      if (this.set.rpw) document.documentElement.style.setProperty('--rpw', this.set.rpw + 'px');
       this.rp.body = h('div', { class: 'rp-body' });
-      R.append(tabs, this.rp.body);
-      this.rp.tabs = tabs;
-      this.renderPanel();
+      P.append(rz, this.rp.body);
+      this.renderPanel(true);
     }
-    renderPanel() {
+    renderPanel(force) {
       if (!this.rp) return;
       document.body.classList.toggle('no-panel', !this.set.panel);
-      U.$$('.rp-tab', this.rp.tabs).forEach((b) => b.classList.toggle('on', b.dataset.k === this.set.panelTab));
-      if (!this.set.panel) { setTimeout(() => this.charts.forEach((c) => c.resize()), 0); return; }
+      for (const k in this.rp.btn) this.rp.btn[k].classList.toggle('on', !!this.set.panel && this.set.panelTab === k);
+      if (!this.set.panel) { this._panelTab = null; setTimeout(() => this.charts.forEach((c) => c.resize()), 0); return; }
       const B = this.rp.body;
-      B.innerHTML = '';
       const tab = this.set.panelTab;
       if (tab === 'watch') {
-        const c = this.active;
-        B.append(h('div', { class: 'rp-tool' }, h('button', { class: 'btn small', text: '+ 현재 종목 추가', onclick: () => this.addWatch() })));
-        this.wRows = {};
-        const list = h('div', { class: 'w-list' });
-        this.watch.forEach((w, i) => {
-          const px = h('span', { class: 'w-px' }), ch = h('span', { class: 'w-ch' });
-          const row = h('div', { class: 'w-row' + (c && c.src === w.src && c.sym === w.sym ? ' on' : ''), onclick: () => { const a = this.active; const iv = Data.supports(w.src, a.iv, w.sym) ? a.iv : '1D'; a.load(w.src, w.sym, iv); this.saveSlot(a); this.refreshTop(); setTimeout(() => this.renderPanel(), 50); } },
-            h('div', { class: 'w-nm' }, h('b', { text: w.sym }), h('small', { text: (w.name && w.name !== w.sym ? w.name + ' · ' : '') + (SRC_NAMES[w.src] || w.src) })), px, ch,
-            h('button', { class: 'mini w-del', html: ICON.close, title: '삭제', onclick: (e) => { e.stopPropagation(); this.watch.splice(i, 1); U.save('watch', this.watch); this.renderPanel(); } }));
-          this.wRows[w.src + ':' + w.sym] = { px, ch };
-          list.append(row);
-        });
-        B.append(list);
-        this.renderWatchPrices();
-      } else if (tab === 'alerts') {
+        if (force || this._panelTab !== 'watch' || !this.wl.root || !this.wl.root.isConnected) { B.innerHTML = ''; this.wl.render(B); }
+        else this.wl.syncActive();
+        this._panelTab = 'watch';
+        setTimeout(() => this.charts.forEach((c) => c.resize()), 0);
+        return;
+      }
+      this._panelTab = tab;
+      B.innerHTML = '';
+      const title = (t) => h('div', { class: 'rp-title' }, h('span', { text: t }));
+      if (tab === 'alerts') {
+        B.append(title('알림'));
         B.append(h('div', { class: 'rp-tool' }, h('button', { class: 'btn small', text: '+ 알림 추가', onclick: () => this.openAlertDialog(this.active) }),
           h('button', { class: 'btn small', text: '울린 알림 지우기', onclick: () => { this.alerts = this.alerts.filter((a) => !a.fired); U.save('alerts', this.alerts); this.renderPanel(); this.charts.forEach((x) => x.invalidate()); } })));
         if (!this.alerts.length) B.append(h('div', { class: 'rp-empty', text: '알림이 없습니다. 차트 우클릭 → "여기에 알림 추가" 또는 Alt+A' }));
@@ -1149,6 +1160,7 @@
       } else {
         const c = this.active;
         if (!c) return;
+        B.append(title('객체 트리'));
         B.append(h('div', { class: 'rp-sub', text: '지표 (' + c.inds.length + ')' }));
         for (const ind of c.inds) B.append(h('div', { class: 'o-row' }, h('span', { class: 'o-nm', text: IND[ind.type].label(ind.inp) }),
           h('button', { class: 'mini', html: ind.hidden ? ICON.eyeOff : ICON.eye, onclick: () => { c.toggleInd(ind); this.renderPanel(); } }),
@@ -1168,27 +1180,12 @@
       }
       setTimeout(() => this.charts.forEach((c) => c.resize()), 0);
     }
-    renderWatchPrices() {
-      if (!this.wRows || this.set.panelTab !== 'watch' || !this.set.panel) return;
-      for (const k in this.wRows) {
-        const q = this.quotes[k], r = this.wRows[k];
-        if (!q || q.last == null) continue;
-        const w = this.watch.find((x) => x.src + ':' + x.sym === k);
-        const c = this.charts.find((x) => x.key === k);
-        const prec = c ? c.prec : U.decOf(q.last) > 6 ? 6 : U.decOf(q.last);
-        r.px.textContent = U.fmt(q.last, Math.min(prec, 8));
-        if (q.chg != null) { r.ch.textContent = U.fmtPct(q.chg); r.ch.style.color = q.chg >= 0 ? this.set.up : this.set.dn; }
-        if (!w) continue;
-      }
-    }
     addWatch(c) {
       c = c || this.active;
-      if (this.watch.some((w) => w.src === c.src && w.sym === c.sym)) { U.toast('이미 관심종목에 있습니다'); return; }
-      this.watch.push({ src: c.src, sym: c.sym, name: c.dispName() || c.sym });
-      U.save('watch', this.watch);
       this.set.panel = true; this.set.panelTab = 'watch'; this.saveSet();
-      this.renderPanel();
-      U.toast('관심종목에 추가: ' + c.sym);
+      this.renderPanel(true);
+      if (this.wl.add(c.src, c.sym, c.dispName())) U.toast('관심종목에 추가: ' + CL.tickOf(c.src, c.sym));
+      else U.toast('이미 관심종목에 있습니다');
     }
   }
 

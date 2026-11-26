@@ -1,4 +1,4 @@
-/* ChartLab — indicators.js : 기술적 지표 계산(TA) + 지표 정의(IND) */
+/* TradingHyun — indicators.js : 기술적 지표 계산(TA) + 지표 정의(IND) */
 (function () {
   'use strict';
   const CL = window.CL, U = CL.U;
