@@ -2,11 +2,19 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>TradingHyun — 차트 분석</title>
   <meta name="theme-color" content="#000000">
+  <!-- 폰에서 "홈 화면에 추가"하면 주소창 없이 앱처럼 열림 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TradingHyun">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23000'/%3E%3Cpath fill='%23fff' d='M6 12h5v14H6zM21 6h5v20h-5zM11 18l10-6v5l-10 6z'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/mobile.css">
 </head>
 <body>
   <div id="app">
@@ -25,6 +33,7 @@
   <script src="js/drawing.js"></script>
   <script src="js/tools.js"></script>
   <script src="js/watchlist.js"></script>
+  <script src="js/mobile.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

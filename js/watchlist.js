@@ -181,6 +181,7 @@
       Data.get('upbit').list().then((L) => {
         for (const x of L) { this.upNames[x.symbol] = x.name; const b = x.symbol.split('-')[1]; if (b && (!this.upBase[b] || x.symbol.startsWith('KRW-'))) this.upBase[b] = x.name; }
         if (this.root) { this.render(this.host); this.app._topKey = ''; this.app.refreshTop(); }
+        if (this.app.m) this.app.m.onNames();
       }).catch(() => {});
     }
     loadState() {
@@ -196,7 +197,7 @@
       s.flags = s.flags || {};
       return s;
     }
-    save() { U.save('wl', this.st); }
+    save() { U.save('wl', this.st); if (this.app.m) this.app.m.onWl(); }
     get list() {
       const c = this.st.cur;
       if (String(c).startsWith('flag:')) {
@@ -659,4 +660,6 @@
   }
   CL.Watchlist = Watchlist;
   CL.tickOf = tickOf;
+  // 모바일 화면(mobile.js)에서 같이 씀
+  Object.assign(CL, { exOf, curOf, pxDec: decOf, FLAGC, FLAGN, baseOf });
 })();

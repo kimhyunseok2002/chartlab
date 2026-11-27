@@ -268,10 +268,10 @@
 
   /* ================= 적중 판정 ================= */
   P.hitTest = function (x, y) {
-    const tol = 6;
+    const tol = this._touch ? 14 : 6, htol = this._touch ? 22 : 8; // 손가락은 마우스보다 넉넉하게
     const pick = [this.sel, this.hov].filter((d) => d && d._H && !d.hidden && !this.app.set.hideAll);
     for (const d of pick) {
-      for (let k = 0; k < d._H.length; k++) { const h = d._H[k]; if (Math.hypot(h.x - x, h.y - y) <= 8) return { d, handle: k }; }
+      for (let k = 0; k < d._H.length; k++) { const h = d._H[k]; if (Math.hypot(h.x - x, h.y - y) <= htol) return { d, handle: k }; }
     }
     for (let i = this.drawings.length - 1; i >= 0; i--) {
       const d = this.drawings[i];

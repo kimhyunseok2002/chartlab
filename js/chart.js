@@ -801,14 +801,18 @@
       this._lgTitle = U.h('span', { class: 'lg-title', title: '종목 검색', onclick: () => this.app.openSearch(this) });
       this._lgOHLC = U.h('span', { class: 'lg-ohlc' });
       this._lgStat = U.h('span', { class: 'lg-stat' });
-      const logo = CL.Logo ? CL.Logo.el(this.src, this.sym, 18, this.dispName()) : null;
+      const mob = !!this.app.mobile;
+      const logo = CL.Logo ? CL.Logo.el(this.src, this.sym, mob ? 20 : 18, this.dispName()) : null;
       main.append(U.h('div', { class: 'lg-row lg-sym' }, logo, this._lgTitle, this._lgStat, this._lgOHLC));
+      let nMain = 0;
       for (const ind of this.inds) {
         const sub = IND.paneOf(ind.type, ind.inp) === 'sub';
+        if (!sub) nMain++;
         const box = sub ? mk(ind.id) : main;
         const def = IND[ind.type];
         const vals = U.h('span', { class: 'lg-vals' });
-        const row = U.h('div', { class: 'lg-row lg-ind' + (ind.hidden ? ' off' : '') },
+        // 모바일: 지표 줄을 탭하면 버튼(숨기기·설정·삭제)이 나옴
+        const row = U.h('div', { class: 'lg-row lg-ind' + (ind.hidden ? ' off' : ''), onclick: mob ? (e) => { if (!e.target.closest('button')) e.currentTarget.classList.toggle('open'); } : null },
           U.h('span', { class: 'lg-name', text: def.label(ind.inp), ondblclick: () => this.app.openIndSettings(this, ind) }),
           vals,
           U.h('span', { class: 'lg-btns' },
@@ -819,6 +823,17 @@
             U.h('button', { title: '삭제', html: I.close, onclick: (e) => { e.stopPropagation(); this.removeInd(ind.id); } })));
         box.append(row);
         ind._lgVals = vals;
+      }
+      if (mob && nMain) { // 트레이딩뷰 앱처럼 차트 위 지표는 "∨ 개수" 버튼으로 접기 (처음엔 접힘)
+        main.classList.toggle('lg-col', this.app.set.mLgCol !== false);
+        main.append(U.h('button', {
+          class: 'lg-tog', html: I.down + '<b>' + nMain + '</b>', title: '지표 접기/펼치기',
+          onclick: () => {
+            this.app.set.mLgCol = this.app.set.mLgCol === false; this.app.saveSet();
+            main.classList.toggle('lg-col', this.app.set.mLgCol !== false);
+            this._lgMainH = main.offsetHeight; this.invalidate();
+          },
+        }));
       }
       this.updateLegend();
       const mh = main.offsetHeight;
@@ -837,7 +852,8 @@
       const n = this.bars.length;
       const prov = Data.get(this.src);
       const nm = this.dispName(), tk = CL.tickOf ? CL.tickOf(this.src, this.sym) : this.sym;
-      const title = (nm && nm !== this.sym ? nm + ' (' + tk + ')' : tk) + ' · ' + U.IV_LABEL[this.iv] + ' · ' + (prov ? prov.name : this.src);
+      const title = this.app.mobile ? (this.src === 'stock' && nm ? nm : tk)
+        : (nm && nm !== this.sym ? nm + ' (' + tk + ')' : tk) + ' · ' + U.IV_LABEL[this.iv] + ' · ' + (prov ? prov.name : this.src);
       if (this._lgTitle.textContent !== title) this._lgTitle.textContent = title;
       const st = this.replay ? '리플레이' : this.status === 'live' || this.status === 'resync' ? '실시간' : this.status === 'poll' ? '지연' : this.status === 'reconnect' ? '재연결…' : '';
       if (this._lgStat.textContent !== st) { this._lgStat.textContent = st; this._lgStat.className = 'lg-stat ' + (this.status || ''); }
@@ -854,10 +870,10 @@
       const pc = i > 0 ? this.bars[i - 1].c : b.o;
       const ch = b.c - pc, chp = pc ? (ch / pc) * 100 : 0;
       const f = (v) => U.fmt(v, this.prec);
-      this._lgOHLC.innerHTML =
-        '<i>시</i><b style="color:' + col + '">' + f(b.o) + '</b><i>고</i><b style="color:' + col + '">' + f(b.h) +
-        '</b><i>저</i><b style="color:' + col + '">' + f(b.l) + '</b><i>종</i><b style="color:' + col + '">' + f(b.c) +
-        '</b><b style="color:' + (ch >= 0 ? set.up : set.dn) + '">' + (ch >= 0 ? '+' : '') + f(ch) + ' (' + U.fmtPct(chp) + ')</b>';
+      // 이름표와 값은 한 덩어리로 (좁은 화면에서 줄이 바뀌어도 "종"과 값이 떨어지지 않게)
+      const pair = (n, v) => '<span class="lg-p"><i>' + n + '</i><b style="color:' + col + '">' + f(v) + '</b></span>';
+      this._lgOHLC.innerHTML = pair('시', b.o) + pair('고', b.h) + pair('저', b.l) + pair('종', b.c) +
+        '<b class="lg-chg" style="color:' + (ch >= 0 ? set.up : set.dn) + '">' + (ch >= 0 ? '+' : '') + f(ch) + ' (' + U.fmtPct(chp) + ')</b>';
       for (const ind of this.inds) {
         if (!ind._lgVals) continue;
         const def = IND[ind.type], o = ind._o || {};
@@ -945,6 +961,7 @@
         const res = await Data.load(src, sym, iv);
         if (token !== this.loadToken) return;
         if (!res.bars.length) throw new Error('데이터가 없습니다');
+        this.zoomHist = [];
         const prov = Data.get(src);
         this.meta = prov.meta ? prov.meta(sym) : {};
         this.tzOff = prov.tz(sym) || 0;
@@ -1083,7 +1100,8 @@
       if (y >= this.areaH) return { k: x >= this.plotW ? 'corner' : 'time' };
       const p = this.paneAt(y);
       if (x >= this.plotW) return { k: 'price', p };
-      for (let k = 1; k < this.panes.length; k++) if (Math.abs(y - this.panes[k].top) <= 3) return { k: 'sep', idx: k };
+      const tol = this._touch ? 8 : 3;
+      for (let k = 1; k < this.panes.length; k++) if (Math.abs(y - this.panes[k].top) <= tol) return { k: 'sep', idx: k };
       return { k: 'plot', p };
     }
     bindEvents() {
@@ -1093,8 +1111,8 @@
       cv.addEventListener('pointermove', (e) => this.onMove(e));
       cv.addEventListener('pointerup', (e) => this.onUp(e));
       cv.addEventListener('pointercancel', (e) => this.onUp(e));
-      cv.addEventListener('pointerleave', () => {
-        if (this.drag) return;
+      cv.addEventListener('pointerleave', (e) => {
+        if (this.drag || e.pointerType === 'touch') return; // 터치는 손가락을 떼도 십자선 유지
         this.mouse.in = false; this.hov = null;
         this.app.syncCross(this, null);
         this.invalidate();
@@ -1108,25 +1126,33 @@
       this.setMods(e);
       if (e.button === 2) return;
       const { x, y } = this.pos(e);
+      const touch = (this._touch = e.pointerType === 'touch');
+      this.stopFling();
       this.app.setActive(this);
       this.pointers.set(e.pointerId, { x, y });
       try { this.cv.setPointerCapture(e.pointerId); } catch (er) {}
-      if (this.pointers.size === 2) { // 핀치 줌
+      if (this.pointers.size >= 2) { // 핀치 줌 (두 손가락: 확대·축소 + 이동)
+        clearTimeout(this._lpT);
+        if (this.pointers.size > 2) return;
+        const d0 = this.drag;
+        if (d0 && (d0.k === 'move' || d0.k === 'handle') && d0.moved) this.commit();
+        // 손가락 하나로 그리기를 막 시작했는데 두 번째 손가락이 오면 확대·축소하려던 것
+        if (touch && this.creating && this.creating.placed === 1 && !this.creating.moved) this.cancelCreate();
         const [a, b] = Array.from(this.pointers.values());
-        this.drag = { k: 'pinch', d0: Math.abs(a.x - b.x) || 1, s0: this.view.s, cx: (a.x + b.x) / 2, i0: this.x2i((a.x + b.x) / 2) };
-        if (this.creating && !this.creating.free) { /* keep */ }
+        this.drag = { k: 'pinch', d0: Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)), s0: this.view.s, i0: this.x2i((a.x + b.x) / 2) };
+        if (touch) this.mouse.in = false;
+        this.invalidate();
         return;
       }
-      this.mouse = { x, y, in: true };
+      if (!touch) this.mouse = { x, y, in: true };
       const rg = this.region(x, y);
       if (this.app.replaySel === this && rg.k === 'plot') { this.app.replayPick(this, Math.round(this.x2i(x))); return; }
       if (rg.k === 'price') {
         const p = rg.p;
-        this.drag = { k: 'pscale', p, y0: y, u0: [p.umin, p.umax] };
-        p.st.auto = false; p.st.umin = p.umin; p.st.umax = p.umax;
+        this.drag = { k: 'pscale', p, y0: y, u0: [p.umin, p.umax], moved: false }; // 자동 스케일은 실제로 끌 때 해제
         return;
       }
-      if (rg.k === 'time') { this.drag = { k: 'tscale', x0: x, s0: this.view.s }; return; }
+      if (rg.k === 'time') { this.drag = { k: 'tscale', x0: x, s0: this.view.s, moved: false }; return; }
       if (rg.k === 'sep') {
         const a = this.panes[rg.idx - 1], b = this.panes[rg.idx];
         this.drag = { k: 'sep', a, b, y0: y, ha: a.h, hb: b.h, w: a.st.w + b.st.w };
@@ -1134,6 +1160,13 @@
       }
       if (rg.k !== 'plot') return;
       const tool = this.app.tool;
+      this._tDraw = touch && !!(this.creating || CL.TOOLS[tool] || tool === 'measure' || tool === 'zoom');
+      if (this._tDraw) this.mouse = { x, y, in: true }; // 그리는 동안은 손가락 위치에 십자선
+      if (this.measure && !this.measure.done && this.drag && this.drag.k === 'measure') { // 탭-탭(클릭-클릭)으로 잰 두 번째 점
+        this.measure.pts[1] = this.ptAt(this.measure.p, x, y);
+        this.measure.done = true; this.drag = null; this.invalidate();
+        return;
+      }
       if (this.measure && this.measure.done) { this.measure = null; this.invalidate(); if (tool === 'measure') this.app.setTool('cursor'); return; }
       if (this.creating) { this.createClick(x, y); return; }
       if (CL.TOOLS[tool]) { this.createStart(tool, x, y, rg.p); return; }
@@ -1147,6 +1180,7 @@
         return;
       }
       const h = this.hitTest(x, y);
+      if (touch) { this.touchDown(x, y, rg.p, h); return; }
       if (h) {
         this.select(h.d);
         if (!h.d.locked && !this.app.set.lockAll) {
@@ -1160,37 +1194,116 @@
       const p = rg.p;
       this.drag = { k: 'pan', x0: x, y0: y, r0: this.view.r, p, u0: [p.umin, p.umax] };
     }
+    /* 터치: 탭 = 십자선 켜기/끄기(드로잉이면 선택), 길게 누르기 = 십자선을 손가락으로 끌기,
+       드래그 = 차트 이동(십자선이 켜져 있으면 십자선 이동), 두 손가락 = 확대·축소 */
+    touchDown(x, y, p, hit) {
+      clearTimeout(this._lpT);
+      if (hit && hit.d === this.sel && !hit.d.locked && !this.app.set.lockAll) { // 선택된 드로잉만 끌어서 옮김
+        this.drag = { k: hit.handle >= 0 ? 'handle' : 'move', d: hit.d, handle: hit.handle, x0: x, y0: y, orig: JSON.parse(JSON.stringify(hit.d.pts)), moved: false };
+        return;
+      }
+      const tap = { t0: Date.now(), hit: hit ? hit.d : null, moved: false };
+      if (this.mouse.in) { this.drag = { k: 'xhair', x0: x, y0: y, mx: this.mouse.x, my: this.mouse.y, tap }; return; }
+      this.drag = { k: 'pan', x0: x, y0: y, r0: this.view.r, p, u0: [p.umin, p.umax], tap, hist: [{ x, t: performance.now() }] };
+      this._lpT = setTimeout(() => {
+        const d = this.drag;
+        if (!d || d.k !== 'pan' || d.tap !== tap || tap.moved) return;
+        tap.moved = true; // 손을 떼도 탭으로 치지 않음 (십자선 유지)
+        this.mouse = { x: d.x0, y: d.y0, in: true };
+        this.drag = { k: 'xhair', x0: d.x0, y0: d.y0, mx: d.x0, my: d.y0, tap };
+        try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}
+        this.invalidate();
+      }, 420);
+    }
+    touchTap(x, y, d) {
+      const hit = d.tap.hit;
+      if (d.k === 'xhair') { this.mouse.in = false; if (hit) this.select(hit); return; }
+      if (hit) { this.select(hit); return; }
+      if (this.sel) { this.select(null); return; }
+      this.mouse = { x, y, in: true };
+    }
+    fling(hist) {
+      const now = performance.now();
+      const s = (hist || []).filter((q) => now - q.t < 120);
+      if (s.length < 2) return;
+      const a = s[0], b = s[s.length - 1];
+      if (now - b.t > 60 || b.t - a.t < 8) return; // 멈췄다가 뗐으면 관성 없음
+      let v = U.clamp((b.x - a.x) / (b.t - a.t), -6, 6); // px/ms
+      if (Math.abs(v) < 0.25) return;
+      let last = now;
+      const step = (t) => {
+        const dt = Math.min(40, t - last);
+        last = t;
+        this.view.r -= (v * dt) / this.view.s;
+        v *= Math.pow(0.9955, dt);
+        if (this.from < 40) this.loadMore();
+        this.invalidate();
+        this._fling = Math.abs(v) > 0.03 ? requestAnimationFrame(step) : 0;
+      };
+      this._fling = requestAnimationFrame(step);
+    }
+    stopFling() { if (this._fling) { cancelAnimationFrame(this._fling); this._fling = 0; } }
+    /* 영역 확대(돋보기) 되돌리기 */
+    zoomBack() {
+      const z = this.zoomHist && this.zoomHist.pop();
+      if (!z) return false;
+      this.view.s = z.s; this.view.r = z.r;
+      const st = this.ps[z.k];
+      if (st) { st.auto = z.auto; st.umin = z.umin; st.umax = z.umax; }
+      this.invalidate();
+      return true;
+    }
     onMove(e) {
       this.setMods(e);
       const { x, y } = this.pos(e);
+      const touch = e.pointerType === 'touch';
       if (this.pointers.has(e.pointerId)) this.pointers.set(e.pointerId, { x, y });
-      this.mouse = { x, y, in: true };
+      else if (touch) return;
+      if (!touch) this.mouse = { x, y, in: true };
       const d = this.drag;
       if (d) {
         switch (d.k) {
           case 'pinch': {
             if (this.pointers.size < 2) break;
             const [a, b] = Array.from(this.pointers.values());
-            const dist = Math.abs(a.x - b.x) || 1;
+            const dist = Math.max(20, Math.hypot(a.x - b.x, a.y - b.y));
             this.view.s = U.clamp((d.s0 * dist) / d.d0, 0.3, 80);
-            this.view.r = d.i0 + (this.plotW - d.cx) / this.view.s;
-            break;
-          }
-          case 'pan': {
-            this.view.r = d.r0 - (x - d.x0) / this.view.s;
-            const p = d.p;
-            if (p.st.auto && Math.abs(y - d.y0) > 40) { p.st.auto = false; p.st.umin = p.umin; p.st.umax = p.umax; d.u0 = [p.umin, p.umax]; d.y0 = y; }
-            if (!p.st.auto) { const du = ((y - d.y0) / p.h) * (d.u0[1] - d.u0[0]); p.st.umin = d.u0[0] + du; p.st.umax = d.u0[1] + du; }
+            this.view.r = d.i0 + (this.plotW - (a.x + b.x) / 2) / this.view.s; // 두 손가락 가운데를 고정 → 같이 움직이면 이동
             if (this.from < 40) this.loadMore();
             break;
           }
+          case 'pan': {
+            if (d.tap && !d.tap.moved) {
+              if (Math.hypot(x - d.x0, y - d.y0) <= (touch ? 7 : 2)) break; // 아직 탭인지 판정 중
+              d.tap.moved = true;
+              clearTimeout(this._lpT);
+              if (touch) { d.x0 = x; d.y0 = y; d.r0 = this.view.r; }
+            }
+            this.view.r = d.r0 - (x - d.x0) / this.view.s;
+            const p = d.p;
+            if (p.st.auto && Math.abs(y - d.y0) > (touch ? 70 : 40)) { p.st.auto = false; p.st.umin = p.umin; p.st.umax = p.umax; d.u0 = [p.umin, p.umax]; d.y0 = y; }
+            if (!p.st.auto) { const du = ((y - d.y0) / p.h) * (d.u0[1] - d.u0[0]); p.st.umin = d.u0[0] + du; p.st.umax = d.u0[1] + du; }
+            if (d.hist) { d.hist.push({ x, t: performance.now() }); if (d.hist.length > 8) d.hist.shift(); }
+            if (this.from < 40) this.loadMore();
+            break;
+          }
+          case 'xhair': {
+            if (!d.tap.moved && Math.hypot(x - d.x0, y - d.y0) > 7) d.tap.moved = true;
+            this.mouse = { x: U.clamp(d.mx + x - d.x0, 0, this.plotW - 1), y: U.clamp(d.my + y - d.y0, 0, this.areaH - 1), in: true };
+            break;
+          }
           case 'pscale': {
+            if (!d.moved) {
+              if (Math.abs(y - d.y0) < 3) break;
+              d.moved = true;
+              d.p.st.auto = false;
+            }
             const k = Math.exp((y - d.y0) * 0.006);
             const mid = (d.u0[0] + d.u0[1]) / 2, half = ((d.u0[1] - d.u0[0]) / 2) * k;
             d.p.st.umin = mid - half; d.p.st.umax = mid + half;
             break;
           }
-          case 'tscale': this.view.s = U.clamp(d.s0 * Math.exp((x - d.x0) * 0.006), 0.3, 80); if (this.from < 40) this.loadMore(); break;
+          case 'tscale': if (Math.abs(x - d.x0) > 2) d.moved = true; this.view.s = U.clamp(d.s0 * Math.exp((x - d.x0) * 0.006), 0.3, 80); if (this.from < 40) this.loadMore(); break;
           case 'sep': {
             const tot = d.ha + d.hb;
             const ha = U.clamp(d.ha + (y - d.y0), 30, tot - 30);
@@ -1204,6 +1317,10 @@
         }
         this.invalidate();
         this.app.syncCross(this, this.bars.length ? this.i2t(Math.round(this.x2i(x))) : null);
+        return;
+      }
+      if (touch) { // 터치에는 마우스 올리기(호버)가 없음 — 그리는 중일 때만 손가락을 따라감
+        if (this.creating) { this.mouse = { x, y, in: true }; this.createMove(x, y); this.invalidate(); }
         return;
       }
       if (this.creating) this.createMove(x, y);
@@ -1228,13 +1345,38 @@
     onUp(e) {
       this.setMods(e);
       const { x, y } = this.pos(e);
-      this.pointers.delete(e.pointerId);
+      const touch = e.pointerType === 'touch', cancel = e.type === 'pointercancel';
+      const had = this.pointers.delete(e.pointerId);
       try { this.cv.releasePointerCapture(e.pointerId); } catch (er) {}
-      if (this.creating) this.createUp(x, y);
+      if (touch && !had) return;
+      clearTimeout(this._lpT);
       const d = this.drag;
-      if (!d) return;
-      if (d.k === 'pinch') { if (this.pointers.size < 2) this.drag = null; return; }
+      if (this.creating && !(d && d.k === 'pinch')) this.createUp(x, y);
+      if (touch && this._tDraw && !this.creating && !(this.measure && !this.measure.done)) { this._tDraw = false; this.mouse.in = false; } // 다 그렸으면 십자선 끔
+      if (!d) { if (touch) this.invalidate(); return; }
+      if (d.k === 'pinch') {
+        if (this.pointers.size < 2) {
+          this.drag = null;
+          if (touch && this.pointers.size === 1) { // 남은 손가락으로 계속 이동
+            const q = Array.from(this.pointers.values())[0], p = this.pmap.main;
+            this.drag = { k: 'pan', x0: q.x, y0: q.y, r0: this.view.r, p, u0: [p.umin, p.umax], tap: { moved: true }, hist: [] };
+          }
+        }
+        return;
+      }
+      if (this.pointers.size) return;
       this.drag = null;
+      if (touch && (d.k === 'pan' || d.k === 'xhair') && d.tap) {
+        if (!cancel && !d.tap.moved && Date.now() - d.tap.t0 < 600) this.touchTap(x, y, d);
+        else if (!cancel && d.k === 'pan') this.fling(d.hist);
+      }
+      if (touch && !cancel && (d.k === 'pscale' || d.k === 'tscale') && !d.moved) { // 축 두 번 탭 = 자동 맞춤
+        const now = Date.now();
+        if (this._axTap && this._axTap.k === d.k && now - this._axTap.t < 350) {
+          if (d.k === 'pscale') d.p.st.auto = true; else { this.view.s = 8; this.fit(); }
+          this._axTap = null;
+        } else this._axTap = { k: d.k, t: now };
+      }
       if ((d.k === 'handle' || d.k === 'move') && d.moved) this.commit();
       if (d.k === 'measure' && this.measure) {
         const m = this.measure;
@@ -1242,6 +1384,7 @@
         if (m.done && this.app.tool === 'measure') {}
       }
       if (d.k === 'zoom' && d.x1 != null && Math.abs(d.x1 - d.x0) > 8) {
+        (this.zoomHist || (this.zoomHist = [])).push({ s: this.view.s, r: this.view.r, k: d.p.key, auto: d.p.st.auto, umin: d.p.st.umin, umax: d.p.st.umax });
         const i0 = this.x2i(Math.min(d.x0, d.x1)), i1 = this.x2i(Math.max(d.x0, d.x1));
         this.view.s = U.clamp(this.plotW / Math.max(1, i1 - i0), 0.3, 80);
         this.view.r = i1;
@@ -1296,6 +1439,7 @@
     }
     onCtx(e) {
       e.preventDefault();
+      if (this._touch) return; // 터치에서 길게 누르기는 십자선
       const { x, y } = this.pos(e);
       if (this.creating) { this.createFinishMulti(true); return; }
       const rg = this.region(x, y);

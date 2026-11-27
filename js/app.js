@@ -51,6 +51,9 @@
       this.el = {
         top: U.$('#top'), left: U.$('#left'), charts: U.$('#charts'), panel: U.$('#rpanel'), rbar: U.$('#rbar'), status: U.$('#status'),
       };
+      // 폰이면 트레이딩뷰 앱 같은 모바일 화면 (mobile.js). 설정 → 화면에서 바꿀 수 있음
+      this.mobile = !!(CL.Mobile && CL.Mobile.want());
+      if (this.mobile) document.body.classList.add('mobile');
       this.wl = new CL.Watchlist(this);
       // 시세 허브 → 가격 알림 확인
       CL.Quotes.on((keys) => { for (const k of keys) { const q = CL.Quotes.get(k); if (q && q.last != null) { const i = k.indexOf(':'); this.priceUpdate(k.slice(0, i), k.slice(i + 1), q.last); } } });
@@ -60,7 +63,8 @@
       this.buildRight();
       this.buildStatus();
       this.bindKeys();
-      this.setLayout(this.set.layout || '1');
+      this.setLayout(this.mobile ? '1' : this.set.layout || '1');
+      if (this.mobile) this.m = new CL.Mobile(this);
       this.checkServer();
       this.trackQuotes();
       window.addEventListener('beforeunload', () => { for (const c of this.charts) this.saveSlotNow(c); });
@@ -70,6 +74,7 @@
       const keys = this.wl.keys();
       for (const a of this.alerts) if (a.active && !a.fired) keys.push(a.src + ':' + a.sym);
       if (this.wl.sel) keys.push(this.wl.sel);
+      if (this.m) keys.push(...this.m.trackKeys());
       CL.Quotes.track(keys);
     }
 
@@ -158,6 +163,7 @@
       if (c.bars.length && !CL.Quotes.get(c.key)) CL.Quotes.put(c.key, { last: c.bars[c.bars.length - 1].c });
       this.wl.onChartLoaded(c);
       if (this.set.panelTab === 'tree') this.renderPanel();
+      if (this.m) this.m.onChartLoaded(c);
     }
     onTick(c, b) {
       if (!c.replay) CL.Quotes.put(c.key, { last: b.c });
@@ -169,6 +175,7 @@
     onDrawingsChanged(c) {
       for (const x of this.charts) if (x !== c && x.key === c.key) x.reloadDrawings();
       if (this.set.panelTab === 'tree') this.renderPanel();
+      if (this.m) this.m.refreshUndo();
     }
     syncCross(c, t) {
       if (!this.set.syncCross || this.charts.length < 2) return;
@@ -188,6 +195,7 @@
       this.refreshLeft();
       const cur = t === 'cursor' ? this.cursorCss() : 'crosshair';
       for (const c of this.charts) c.cv.style.cursor = cur;
+      if (this.m) this.m.onTool();
     }
 
     /* ================= 왼쪽 도구모음 ================= */
@@ -335,6 +343,7 @@
       T0.append(logo, sep(), this.tb.sym, sep(), ivBox, sep(), this.tb.type, ind, sep(), lay, this.tb.undo, this.tb.redo, sep(), rep, alert, sp, help, shot, theme, set, full);
     }
     refreshTop() {
+      if (this.m) this.m.refreshChart();
       const c = this.active;
       if (!c || !this.tb) return;
       const prov = Data.get(c.src);
@@ -529,15 +538,16 @@
         tabBox.innerHTML = '';
         for (const [k, n] of tabs) tabBox.append(h('button', { class: 's-tab' + (src === k ? ' on' : ''), text: n, onclick: () => { src = k; renderTabs(); run(); input.focus(); } }));
       };
+      const doAdd = (it) => {
+        const r = opts.add(it), tk = CL.tickOf(it.source, it.symbol);
+        U.toast(r === 'removed' ? tk + ' 뺌' : r === false ? '이미 목록에 있습니다' : tk + ' 추가됨', '', 1400);
+        render();
+      };
       const pick = (it) => {
         const nm = String(it.name || '').split(' · ')[0].trim();
         if (nm && nm !== it.symbol && it.source !== 'csv' && it.source !== 'demo') { this.names[it.source + ':' + it.symbol] = nm; U.save('names', this.names); }
-        if (opts.add) {
-          const added = opts.add(it);
-          U.toast(added === false ? '이미 목록에 있습니다' : CL.tickOf(it.source, it.symbol) + ' 추가됨', '', 1400);
-          render(); input.focus();
-          return;
-        }
+        if (opts.open) { m.close(true); opts.open(it); return; } // 모바일: 종목 시트로 열기
+        if (opts.add) { doAdd(it); input.focus(); return; }
         m.close(true);
         let iv = c.iv;
         if (!Data.supports(it.source, iv, it.symbol)) iv = it.source === 'csv' ? (Data.get('csv').get(it.symbol) || {}).iv || '1D' : '1D';
@@ -559,7 +569,7 @@
             CL.Logo.el(it.source, it.symbol, 22, String(it.name || '').split(' · ')[0]),
             h('span', { class: 's-sym', text: it.symbol }), h('span', { class: 's-name', text: it.name || '' }), h('span', { class: 's-ex', text: it.ex || '' }),
             h('span', { class: 's-src src-' + it.source, text: SRC_NAMES[it.source] || it.source }),
-            opts.add ? h('span', { class: 's-add', text: added ? '✓' : '+' }) : null));
+            opts.add ? h('button', { class: 's-add', type: 'button', title: added ? '목록에 있음' : '목록에 추가', text: added ? '✓' : '+', onclick: (e) => { e.stopPropagation(); doAdd(it); } }) : null));
         });
       };
       const run = U.debounce(async () => {
@@ -595,8 +605,9 @@
         else if (e.key === 'ArrowUp') { hi = Math.max(0, hi - 1); highlight(); e.preventDefault(); }
         else if (e.key === 'Enter') { if (items[hi]) pick(items[hi]); e.preventDefault(); }
       });
-      const m = this.modal(opts.title || '종목 검색', h('div', { class: 's-wrap' }, input, tabBox, extra, list), opts.add ? [{ t: '완료', cls: 'pri', ok: true }] : null, { cls: 'm-search' });
+      const m = this.modal(opts.title || '종목 검색', h('div', { class: 's-wrap' }, input, tabBox, extra, list), opts.add && !opts.open ? [{ t: '완료', cls: 'pri', ok: true }] : null, { cls: 'm-search' });
       renderTabs(); run();
+      input.focus(); // iOS는 사용자 동작 안에서 바로 포커스해야 키보드가 뜸
       setTimeout(() => { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 10);
     }
     openCSV(c, done) {
@@ -712,6 +723,7 @@
     /* ================= 드로잉 툴바/설정 ================= */
     onSelect(c, d) {
       if (c !== this.active) return;
+      if (this.m) this.m.onSelect(c, d);
       if (this.dtb) { this.dtb.remove(); this.dtb = null; }
       if (!d || !T[d.type]) return;
       const t = T[d.type], s = d.s;
@@ -721,10 +733,19 @@
       const hasLine = ui.includes('line') || ui.includes('c') || (s.c && !ui.includes('textOnly'));
       if (hasLine) bar.append(this.swatch(() => s.c, (v) => { s.c = v; if (d.type === 'text' || d.type === 'atext') s.tc = v; commitStyle(); }));
       if (ui.includes('fill')) bar.append(this.swatch(() => s.fc || s.c, (v) => { s.fc = v; s.fill = true; commitStyle(); }, () => (s.fa != null ? s.fa : 0.2), (a) => { s.fa = a; commitStyle(); }));
-      if (ui.includes('text') || ui.includes('textOnly')) bar.append(h('button', { class: 'dtb-b', title: '텍스트 색', html: '<b style="font-size:13px">T</b>', onclick: (e) => this.palette(e.currentTarget, s.tc || s.c, null, (v) => { s.tc = v; commitStyle(); }) }));
+      if ((ui.includes('text') || ui.includes('textOnly')) && (!this.mobile || t.text)) bar.append(h('button', { class: 'dtb-b', title: '텍스트 색', html: '<b style="font-size:13px">T</b>', onclick: (e) => this.palette(e.currentTarget, s.tc || s.c, null, (v) => { s.tc = v; commitStyle(); }) }));
       if (ui.includes('line')) {
         bar.append(h('select', { class: 'dtb-sel', title: '두께', onchange: (e) => { s.w = +e.target.value; commitStyle(); } }, ...[1, 2, 3, 4].map((w) => h('option', { value: w, text: w + 'px', selected: s.w === w }))));
         bar.append(h('select', { class: 'dtb-sel', title: '선 스타일', onchange: (e) => { s.ls = +e.target.value; commitStyle(); } }, ...[[0, '──'], [1, '- -'], [2, '···']].map(([v, n]) => h('option', { value: v, text: n, selected: (s.ls || 0) === v }))));
+      }
+      if (this.mobile) { // 폰: 폭이 좁으니 자주 쓰는 것만 — 나머지(복제·숨기기·순서·알림)는 ⋯
+        bar.append(h('button', { class: 'dtb-b', title: '설정', html: ICON.gear, onclick: () => this.openDrawSettings(c, d) }));
+        bar.append(h('button', { class: 'dtb-b' + (d.locked ? ' on' : ''), title: d.locked ? '잠금 해제' : '잠금', html: d.locked ? ICON.lock : ICON.unlock, onclick: () => { d.locked = !d.locked; c.commit(); this.onSelect(c, d); c.invalidate(); } }));
+        bar.append(h('button', { class: 'dtb-b del', title: '삭제', html: ICON.trash, onclick: () => c.removeDrawing(d) }));
+        bar.append(h('button', { class: 'dtb-b', title: '더 보기', html: ICON.dots, onclick: () => this.m.drawingMenu(c, d) }));
+        c.cell.append(bar);
+        this.dtb = bar;
+        return;
       }
       if (t.text) bar.append(h('button', { class: 'dtb-b', title: '텍스트 편집', html: ICON.text2, onclick: () => this.editText(c, d) }));
       if (d.type === 'hline' || d.type === 'hray') bar.append(h('button', { class: 'dtb-b', title: '이 가격에 알림 추가', html: ICON.bell, onclick: () => this.openAlertDialog(c, d.pts[0].p) }));
@@ -892,6 +913,8 @@
       body.append(h('div', { class: 'f-sec', text: '모양' }));
       body.append(h('label', { class: 'f-row' }, h('span', { class: 'f-l', text: '테마' }), h('select', { onchange: (e) => { s.theme = e.target.value; this.saveSet(); this.applyTheme(); } },
         h('option', { value: 'dark', text: '블랙 (트레이딩뷰 다크)', selected: s.theme === 'dark' }), h('option', { value: 'navy', text: '네이비 (구 트레이딩뷰 다크)', selected: s.theme === 'navy' }), h('option', { value: 'light', text: '라이트', selected: s.theme === 'light' }))));
+      body.append(h('label', { class: 'f-row' }, h('span', { class: 'f-l', text: '화면' }), h('select', { onchange: (e) => { U.save('ui', e.target.value); location.replace(location.pathname); } },
+        ...[['auto', '자동 (폰은 모바일 화면)'], ['mobile', '모바일 화면'], ['desktop', 'PC 화면']].map(([v, n]) => h('option', { value: v, text: n, selected: U.load('ui', 'auto') === v })))));
       const bgSw = this.swatch(() => s.bgColor || (CL.THEMES[s.theme] || CL.THEMES.dark).bg, (v) => { s.bgColor = v; redraw(); });
       body.append(h('div', { class: 'f-row' }, h('span', { class: 'f-l', text: '차트 배경색' }), bgSw,
         h('button', { class: 'btn small', text: '완전 검정', onclick: () => { s.bgColor = '#000000'; bgSw.repaint(); redraw(); } }),
@@ -970,7 +993,7 @@
       this.replaySel = c;
       this.setTool('cursor');
       this.replaySel = c;
-      U.toast('리플레이를 시작할 봉을 차트에서 클릭하세요 (Esc: 취소)', '', 3500);
+      U.toast(this.mobile ? '리플레이를 시작할 봉을 차트에서 탭하세요' : '리플레이를 시작할 봉을 차트에서 클릭하세요 (Esc: 취소)', '', 3500);
     }
     replayPick(c, idx) {
       this.replaySel = null;
@@ -1128,7 +1151,7 @@
       this.renderPanel(true);
     }
     renderPanel(force) {
-      if (!this.rp) return;
+      if (!this.rp || this.mobile) return; // 모바일은 mobile.js가 관심종목·알림 화면을 따로 그림
       document.body.classList.toggle('no-panel', !this.set.panel);
       for (const k in this.rp.btn) this.rp.btn[k].classList.toggle('on', !!this.set.panel && this.set.panelTab === k);
       if (!this.set.panel) { this._panelTab = null; setTimeout(() => this.charts.forEach((c) => c.resize()), 0); return; }
