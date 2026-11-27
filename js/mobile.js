@@ -459,24 +459,38 @@
       const clearPress = () => list.querySelectorAll('.press').forEach((x) => x.classList.remove('press'));
       const cancel = () => { clearTimeout(lp); lp = 0; start = null; clearPress(); };
       list.addEventListener('pointerdown', (e) => {
+        if (this._drag) return;
+        this._lpFired = false;
         const grip = e.target.closest('.mr-grip');
-        if (grip && this.edit) { this.dragRow(e, grip.closest('[data-i]')); return; }
+        if (grip && this.edit) { e.preventDefault(); this._drag = this.rowDrag(grip.closest('[data-i]'), e.pointerId, e.clientY, true); return; }
         if (this.edit) return;
         const row = e.target.closest('.mr-row');
         if (!row) return;
-        start = { x: e.clientX, y: e.clientY };
+        start = { x: e.clientX, y: e.clientY, id: e.pointerId };
         row.classList.add('press');
         clearTimeout(lp);
-        lp = setTimeout(() => { // 길게 누르기 → 종목 메뉴
+        lp = setTimeout(() => { // 길게 누르기 → 행이 떠오름: 그대로 끌면 순서 바꾸기, 움직이지 않고 떼면 메뉴
           lp = 0; this._lpFired = true; clearPress();
           try { if (navigator.vibrate) navigator.vibrate(10); } catch (er) {}
-          this.ghostGuard(this.rowMenu(row.dataset.k, +row.dataset.i));
-        }, 480);
+          this._drag = this.rowDrag(row, start.id, start.y, false);
+        }, 450);
       });
-      list.addEventListener('pointermove', (e) => { if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 8) cancel(); });
-      list.addEventListener('pointerup', () => { clearTimeout(lp); lp = 0; start = null; setTimeout(clearPress, 140); });
-      list.addEventListener('pointercancel', cancel);
-      list.addEventListener('scroll', cancel, { passive: true });
+      list.addEventListener('pointermove', (e) => {
+        const D = this._drag;
+        if (D) { if (e.pointerId === D.id) D.move(e.clientY); return; }
+        if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 8) cancel();
+      });
+      const up = (e) => {
+        const D = this._drag;
+        if (D) { if (e.pointerId === D.id) { this._drag = null; D.end(e.type === 'pointercancel'); } return; }
+        if (e.type === 'pointercancel') { cancel(); return; }
+        clearTimeout(lp); lp = 0; start = null; setTimeout(clearPress, 140);
+      };
+      list.addEventListener('pointerup', up);
+      list.addEventListener('pointercancel', up);
+      // 행을 끄는 동안에는 목록이 손가락을 따라 스크롤되지 않게 (가장자리 자동 스크롤은 rowDrag가 함)
+      list.addEventListener('touchmove', (e) => { if (this._drag) e.preventDefault(); }, { passive: false });
+      list.addEventListener('scroll', () => { if (!this._drag) cancel(); }, { passive: true });
       list.addEventListener('contextmenu', (e) => e.preventDefault());
       list.addEventListener('click', (e) => {
         if (this._lpFired) { this._lpFired = false; return; }
@@ -490,46 +504,80 @@
         if (row) this.openDetail(row.dataset.k);
       });
     }
-    dragRow(e, el) { // 편집 모드: ≡ 손잡이로 순서 바꾸기
-      if (!el) return;
-      e.preventDefault();
-      const els = Array.from(this.list.querySelectorAll('[data-i]'));
-      const rects = els.map((x) => x.getBoundingClientRect());
+    /* 행 끌어서 순서 바꾸기 — 길게 누른 행(edit=false) 또는 편집 모드의 ≡ 손잡이(edit=true).
+       move(y)/end(취소 여부)를 돌려줌. 목록 위·아래 가장자리 가까이 끌면 목록이 저절로 스크롤됨 */
+    rowDrag(el, id, y0, edit) {
+      if (!el) return null;
+      const list = this.list, wl = this.wl;
+      const els = Array.from(list.querySelectorAll('[data-i]'));
       const from = els.indexOf(el);
-      if (from < 0) return;
-      const y0 = e.clientY, hgt = rects[from].height;
-      let to = from;
-      el.classList.add('drag');
-      try { el.setPointerCapture(e.pointerId); } catch (er) {}
-      const mv = (ev) => {
-        const dy = ev.clientY - y0;
-        el.style.transform = 'translateY(' + dy + 'px)';
-        const cy = rects[from].top + hgt / 2 + dy;
+      if (from < 0) return null;
+      const canMove = !wl.list.virtual && (edit || !wl.st.sort);
+      const L0 = list.getBoundingClientRect().top, st0 = list.scrollTop;
+      const cY = (cy) => cy - L0 + list.scrollTop; // 화면 y → 목록 내용 안의 y
+      const pos = els.map((x) => { const b = x.getBoundingClientRect(); return { top: b.top - L0 + st0, h: b.height }; });
+      const hgt = pos[from].h, grab = cY(y0) - pos[from].top;
+      let to = from, y = y0, moved = false, raf = 0, warned = false;
+      el.classList.add('lift');
+      try { el.setPointerCapture(id); } catch (er) {}
+      const layout = () => {
+        const top = cY(y) - grab, mid = top + hgt / 2;
+        el.style.transform = 'translateY(' + (top - pos[from].top) + 'px)';
         to = from;
-        for (let k = 0; k < from; k++) if (cy < rects[k].top + rects[k].height / 2) { to = k; break; }
-        if (to === from) for (let k = els.length - 1; k > from; k--) if (cy > rects[k].top + rects[k].height / 2) { to = k; break; }
+        for (let k = 0; k < from; k++) if (mid < pos[k].top + pos[k].h / 2) { to = k; break; }
+        if (to === from) for (let k = els.length - 1; k > from; k--) if (mid > pos[k].top + pos[k].h / 2) { to = k; break; }
         els.forEach((x, k) => {
           if (k === from) return;
           const s = from < to && k > from && k <= to ? -hgt : from > to && k >= to && k < from ? hgt : 0;
           x.style.transform = s ? 'translateY(' + s + 'px)' : '';
         });
       };
-      const up = () => {
-        el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
-        els.forEach((x) => { x.style.transform = ''; x.classList.remove('drag'); });
-        if (to === from) return;
-        const items = this.wl.list.items, fi = +els[from].dataset.i, ti = +els[to].dataset.i;
-        const [it] = items.splice(fi, 1);
-        items.splice(ti, 0, it);
-        this.wl.save();
+      const auto = () => {
+        const r = list.getBoundingClientRect(), topZ = r.top + 120, botZ = r.bottom - 140;
+        const v = y < topZ ? -Math.min(16, (topZ - y) / 5 + 2) : y > botZ ? Math.min(16, (y - botZ) / 5 + 2) : 0;
+        if (v) { const b = list.scrollTop; list.scrollTop = b + v; if (list.scrollTop !== b) layout(); }
+        raf = requestAnimationFrame(auto);
       };
-      el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+      return {
+        id,
+        move: (cy) => {
+          y = cy;
+          if (!moved) {
+            if (Math.abs(cy - y0) < 6) return;
+            moved = true;
+            if (!canMove) {
+              if (!warned) { warned = true; U.toast(wl.list.virtual ? '깃발 목록은 순서를 바꿀 수 없어요' : '정렬 중이라 순서를 바꿀 수 없어요 — ⋯ → 정렬 → 기본 순서', 'warn', 2600); }
+              return;
+            }
+            el.classList.add('drag');
+            this.home.classList.add('sorting');
+            raf = requestAnimationFrame(auto);
+          }
+          if (canMove) layout();
+        },
+        end: (cancelled) => {
+          cancelAnimationFrame(raf);
+          els.forEach((x) => { x.style.transform = ''; x.classList.remove('drag', 'lift'); });
+          this.home.classList.remove('sorting');
+          if (cancelled) return;
+          if (!moved) { if (!edit) this.ghostGuard(this.rowMenu(el.dataset.k, +el.dataset.i), true); return; }
+          if (!canMove || to === from) return;
+          const items = wl.list.items, fi = +els[from].dataset.i, ti = +els[to].dataset.i, tgt = items[ti];
+          const [it] = items.splice(fi, 1);
+          items.splice(ti, 0, it);
+          if (from < to && tgt && tgt.t === 'sec' && tgt.collapsed) tgt.collapsed = false; // 접힌 섹션에 넣었으면 펼쳐서 보이게
+          wl.save();
+          try { if (navigator.vibrate) navigator.vibrate(6); } catch (er) {}
+        },
+      };
     }
-    /* 길게 누르기로 연 시트: 그 손가락을 뗄 때 생기는 클릭이 시트 안 버튼(예: 삭제)을 누르지 않게 잠시 막음 */
-    ghostGuard(S) {
+    /* 길게 누르기로 연 시트: 그 손가락을 뗄 때 생기는 클릭이 시트 안 버튼(예: 삭제)을 누르지 않게 잠시 막음.
+       afterUp = 손가락을 이미 뗀 순간에 연 경우 (뒤따르는 클릭만 잠깐 막으면 됨) */
+    ghostGuard(S, afterUp) {
       if (!S) return;
       const els = [S.box, S.scrim].filter(Boolean);
       els.forEach((e) => (e.style.pointerEvents = 'none'));
+      if (afterUp) { setTimeout(() => els.forEach((e) => (e.style.pointerEvents = '')), 400); return; }
       let done = false;
       const release = () => {
         if (done) return;
