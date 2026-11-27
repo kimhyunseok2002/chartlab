@@ -2,22 +2,23 @@
 (function () {
   'use strict';
   const CL = window.CL, U = CL.U, IND = CL.IND, Data = CL.Data;
-  const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", Roboto, sans-serif';
+  // 애플 기기에서는 SF, 그 밖에서는 Pretendard(무료 글꼴, index.html에서 불러옴)
+  const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Pretendard Variable", Pretendard, "Segoe UI Variable Text", "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", Roboto, sans-serif';
   const font = (sz, w) => (w ? w + ' ' : '') + sz + 'px ' + FONT;
   CL.FONT = FONT;
 
-  const THEMES = {
+  const THEMES = { // 애플 시스템 색 기반 (다크 = 검정 카드, 미드나이트 = 짙은 남색, 라이트 = 흰 카드)
     dark: {
-      bg: '#0f0f0f', grid: 'rgba(242,242,242,0.06)', text: '#b8b8b8', dim: '#8c8c8c', axis: '#2e2e2e', cross: '#8c8c8c',
-      crossBg: '#3a3a3a', crossFg: '#ffffff', sep: '#2e2e2e', wm: 'rgba(219,219,219,0.06)', hFill: '#0f0f0f', sel: '#2962ff', msg: '#dbdbdb',
+      bg: '#000000', grid: 'rgba(255,255,255,0.055)', text: '#a1a1a6', dim: '#8e8e93', axis: 'rgba(84,84,88,0.6)', cross: '#8e8e93',
+      crossBg: '#48484a', crossFg: '#ffffff', sep: 'rgba(84,84,88,0.6)', wm: 'rgba(255,255,255,0.05)', hFill: '#000000', sel: '#0a84ff', msg: '#f5f5f7',
     },
     navy: {
-      bg: '#131722', grid: 'rgba(42,46,57,0.6)', text: '#b2b5be', dim: '#787b86', axis: '#2a2e39', cross: '#9598a1',
-      crossBg: '#363a45', crossFg: '#ffffff', sep: '#2a2e39', wm: 'rgba(178,181,190,0.07)', hFill: '#131722', sel: '#2962ff', msg: '#d1d4dc',
+      bg: '#0b1220', grid: 'rgba(120,140,180,0.09)', text: '#a3adc2', dim: '#7d879c', axis: 'rgba(100,116,150,0.35)', cross: '#8a94a8',
+      crossBg: '#2a3348', crossFg: '#ffffff', sep: 'rgba(100,116,150,0.35)', wm: 'rgba(163,173,194,0.06)', hFill: '#0b1220', sel: '#0a84ff', msg: '#e5e9f2',
     },
     light: {
-      bg: '#ffffff', grid: 'rgba(42,46,57,0.07)', text: '#131722', dim: '#787b86', axis: '#e0e3eb', cross: '#9598a1',
-      crossBg: '#131722', crossFg: '#ffffff', sep: '#e0e3eb', wm: 'rgba(19,23,34,0.05)', hFill: '#ffffff', sel: '#2962ff', msg: '#131722',
+      bg: '#ffffff', grid: 'rgba(0,0,0,0.05)', text: '#6e6e73', dim: '#86868b', axis: 'rgba(60,60,67,0.18)', cross: '#8e8e93',
+      crossBg: '#1d1d1f', crossFg: '#ffffff', sep: 'rgba(60,60,67,0.18)', wm: 'rgba(0,0,0,0.04)', hFill: '#ffffff', sel: '#007aff', msg: '#1d1d1f',
     },
   };
   CL.THEMES = THEMES;
@@ -213,7 +214,7 @@
       const pd = def.plots.find((q) => q.k === k) || {};
       const o = (ind.sty && ind.sty[k]) || {};
       return {
-        c: o.c || pd.c || '#2962ff', w: o.w != null ? o.w : pd.w || 1, a: o.a != null ? o.a : pd.a != null ? pd.a : 1,
+        c: o.c || pd.c || '#0a84ff', w: o.w != null ? o.w : pd.w || 1, a: o.a != null ? o.a : pd.a != null ? pd.a : 1,
         vis: o.vis != null ? o.vis : !pd.hidden, ls: o.ls != null ? o.ls : pd.ls || 0,
       };
     }
@@ -751,7 +752,7 @@
       const h = s2 ? 32 : 18, top = s2 ? y - 9 : y - 9;
       ctx.fillStyle = bg;
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(x0 + 1, top, this.axisW - 2, h, 2); else ctx.rect(x0 + 1, top, this.axisW - 2, h);
+      if (ctx.roundRect) ctx.roundRect(x0 + 2, top, this.axisW - 4, h, 6); else ctx.rect(x0 + 2, top, this.axisW - 4, h);
       ctx.fill();
       ctx.fillStyle = fg; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.fillText(s, x0 + 8, y);
@@ -781,7 +782,7 @@
         const w = ctx.measureText(txt).width + 14;
         const bx = U.clamp(x - w / 2, 0, this.plotW - w);
         ctx.fillStyle = bg;
-        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, y0 + 2, w, this.timeH - 4, 2) : ctx.rect(bx, y0 + 2, w, this.timeH - 4); ctx.fill();
+        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, y0 + 3, w, this.timeH - 6, 7) : ctx.rect(bx, y0 + 3, w, this.timeH - 6); ctx.fill();
         ctx.fillStyle = fg; ctx.textAlign = 'center';
         ctx.fillText(txt, bx + w / 2, y0 + this.timeH / 2 + 1);
       };

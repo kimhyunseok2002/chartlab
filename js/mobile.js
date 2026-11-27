@@ -16,6 +16,8 @@
     down: sv('M8 11 L14 17 L20 11'),
     up: sv('M8 17 L14 11 L20 17'),
     right: sv('M11 7.5 L17.5 14 L11 20.5'),
+    left: sv('M17 5.5 L8.5 14 L17 22.5'),
+    clock: sv('c14 14 9.5|M14 8.5V14L18 16.5'),
     pencil: sv('M6.5 21.5 L7.6 16.6 L18.4 5.8 L22.2 9.6 L11.4 20.4 Z|M16.2 8 L20 11.8|M5 24.5 H23'),
     favbar: sv('M3.5 15.5 L9 10 L13 14 L19 8|M3.5 21.5 L9 16 L13 20 L19 14|c22.5 5.5 1.6'),
     alarm: sv('M8.5 19V13 A5.5 5.5 0 0 1 19.5 13 V19 L21.5 21 H6.5 Z|M12 23.4 A2 2 0 0 0 16 23.4|M21.5 3.5V9.5|M18.5 6.5H24.5'),
@@ -65,7 +67,7 @@
   class Area {
     constructor(host, o) {
       this.host = host;
-      this.o = Object.assign({ axis: false, labels: false, fill: true, fa: 0.34, padT: 16, padB: 10, padL: 0, padR: 10, dot: true, ref: true, lw: 2 }, o || {});
+      this.o = Object.assign({ axis: false, labels: false, fill: true, fa: 0.3, padT: 16, padB: 10, padL: 0, padR: 10, dot: true, ref: false, lw: 2 }, o || {});
       this.cv = h('canvas', { class: 'ma-cv' });
       host.append(this.cv);
       this.ctx = this.cv.getContext('2d');
@@ -103,14 +105,45 @@
       ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
       ctx.clearRect(0, 0, W, H);
       if (n < 2) return;
-      const axH = o.axis ? 26 : 0, yT = o.padT, yB = H - axH - o.padB, x0 = o.padL, x1 = W - o.padR, bot = H - axH;
+      const axH = o.axis ? 26 : 0, yT = o.padT, yB = H - axH - o.padB, x0 = o.padL, bot = H - axH;
       let lo = Infinity, hi = -Infinity;
       for (const p of pts) { if (p.c < lo) lo = p.c; if (p.c > hi) hi = p.c; }
+      const base = o.base != null && isFinite(o.base) ? o.base : null; // 전일 종가 (점선)
+      if (base != null) { lo = Math.min(lo, base); hi = Math.max(hi, base); }
       if (!(hi > lo)) { const d = Math.abs(hi) * 0.002 || 1; lo -= d; hi += d; }
-      const X = (i) => x0 + (i / (n - 1)) * (x1 - x0);
       const Y = (v) => yB - ((v - lo) / (hi - lo)) * (yB - yT);
+      const col = o.col || '#30d158', dim = o.dim || '#8e8e93';
+      // 오른쪽 가격 눈금 (글자 폭만큼 오른쪽을 비움)
+      const ticks = [];
+      let padR = o.padR;
+      ctx.font = '11px ' + CL.FONT;
+      if (o.labels) {
+        const step = U.niceStep(hi - lo, Math.max(2, Math.floor((yB - yT) / 70)));
+        const sd = Math.min(8, U.decOf(+step.toPrecision(6)));
+        for (let v = Math.ceil(lo / step) * step, k = 0; v <= hi && k < 30; v += step, k++) {
+          const y = Y(v);
+          if (y < yT - 2 || y > yB + 2) continue;
+          const s = U.fmt(v, sd);
+          ticks.push({ y, s });
+          padR = Math.max(padR, ctx.measureText(s).width + 16);
+        }
+      }
+      const x1 = W - padR;
+      const X = (i) => x0 + (i / (n - 1)) * (x1 - x0);
       this.X = X; this.x0 = x0; this.x1 = x1;
-      const col = o.col || '#089981', dim = o.dim || '#8e8e93';
+      if (ticks.length) { // 옅은 가로 눈금선 + 오른쪽 숫자
+        ctx.save(); ctx.strokeStyle = o.grid || 'rgba(128,128,128,.16)'; ctx.lineWidth = 1; ctx.setLineDash([1, 3]);
+        ctx.beginPath();
+        for (const t of ticks) { const y = Math.round(t.y) + 0.5; ctx.moveTo(x0, y); ctx.lineTo(x1, y); }
+        ctx.stroke(); ctx.restore();
+        ctx.fillStyle = dim; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        for (const t of ticks) ctx.fillText(t.s, W - 4, t.y);
+      }
+      if (base != null) { // 전일 종가 점선
+        const y = Math.round(Y(base)) + 0.5;
+        ctx.save(); ctx.setLineDash([2, 4]); ctx.lineCap = 'round'; ctx.strokeStyle = o.dash || 'rgba(160,160,160,.75)'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ctx.restore();
+      }
       const line = () => { ctx.beginPath(); ctx.moveTo(X(0), Y(pts[0].c)); for (let i = 1; i < n; i++) ctx.lineTo(X(i), Y(pts[i].c)); };
       if (o.fill) {
         line();
@@ -122,25 +155,13 @@
       line();
       ctx.strokeStyle = col; ctx.lineWidth = o.lw; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
       const lx = X(n - 1), ly = Y(pts[n - 1].c);
-      if (o.ref) { // 현재가 점선
+      if (o.ref) { // 현재가 점선 (선택)
         const y = Math.round(ly) + 0.5;
         ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = o.dash || 'rgba(160,160,160,.55)'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); ctx.restore();
       }
-      if (o.labels) { // 왼쪽 가격 눈금
-        const step = U.niceStep(hi - lo, Math.max(2, Math.floor((yB - yT) / 80)));
-        const sd = Math.min(8, U.decOf(+step.toPrecision(6)));
-        ctx.font = '12px ' + CL.FONT; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-        for (let v = Math.ceil(lo / step) * step, k = 0; v <= hi && k < 30; v += step, k++) {
-          const y = Y(v);
-          if (y < yT + 4 || y > yB - 2) continue;
-          const s = U.fmt(v, sd), w = ctx.measureText(s).width;
-          ctx.fillStyle = o.lblBg || 'rgba(0,0,0,.55)'; rr(ctx, 10, y - 10, w + 12, 20, 6); ctx.fill();
-          ctx.fillStyle = dim; ctx.fillText(s, 16, y + 0.5);
-        }
-      }
       if (o.axis) {
-        ctx.font = '12px ' + CL.FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = dim;
+        ctx.font = '11px ' + CL.FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = dim;
         for (const t of this.ticks()) ctx.fillText(t.s, X(t.i), H - axH / 2);
       }
       const dot = (x, y, r1, r2) => {
@@ -229,7 +250,8 @@
       this.refreshChart();
       this.onTool();
       if (this.set.mScreen === 'chart') this.showChart(true);
-      setInterval(() => { if (!this.chartOn) this.loadSpark(); }, 60000);
+      this.paintTabs();
+      setInterval(() => this.paintTabs(), 5000);
     }
     trackKeys() {
       const k = [];
@@ -352,15 +374,16 @@
       }
     }
     /* 메뉴 시트: { icon, n, sub, check, more, danger, dis, fn } | '-' | { head } | { node } */
-    menuSheet(title, items, onClose) {
+    menuSheet(title, items, onClose) { // 항목은 '-'·제목으로 나뉜 둥근 묶음(카드)에 들어감
       const box = h('div', { class: 'ms-list' });
-      let S = null;
+      let S = null, grp = null;
+      const group = () => grp || (grp = box.appendChild(h('div', { class: 'ms-grp' })));
       for (const it of items) {
         if (!it) continue;
-        if (it === '-') { box.append(h('div', { class: 'ms-sep' })); continue; }
-        if (it.head) { box.append(h('div', { class: 'ms-sub', text: it.head })); continue; }
-        if (it.node) { box.append(it.node); continue; }
-        box.append(h('button', { class: 'ms-item' + (it.danger ? ' danger' : ''), disabled: !!it.dis, onclick: () => { S.close(); if (it.fn) it.fn(); } },
+        if (it === '-') { grp = null; continue; }
+        if (it.head) { grp = null; box.append(h('div', { class: 'ms-sub', text: it.head })); continue; }
+        if (it.node) { group().append(it.node); continue; }
+        group().append(h('button', { class: 'ms-item' + (it.danger ? ' danger' : ''), disabled: !!it.dis, onclick: () => { S.close(); if (it.fn) it.fn(); } },
           h('span', { class: 'ms-ic', html: it.icon || '' }), h('span', { class: 'ms-n', text: it.n }),
           it.sub ? h('span', { class: 'ms-r', text: it.sub }) : null,
           it.check != null ? h('span', { class: 'ms-ck', html: it.check ? MI.check : '' }) : null,
@@ -370,26 +393,50 @@
       return S;
     }
 
-    /* ================= 홈: 관심종목 ================= */
+    /* ================= 홈: 관심종목 (큰 제목 + 검색 칸 + 묶음 목록 + 아래 탭 막대) ================= */
     buildHome() {
       const home = (this.home = h('section', { class: 'mh' }));
-      this.hLeft = h('button', { class: 'm-circ', 'aria-label': '메뉴', onclick: () => (this.edit ? this.setEdit(false) : this.homeMenu()) });
-      this.hTitle = h('button', { class: 'mh-title', onclick: () => { if (!this.edit) this.listsSheet(); } });
-      const right = h('button', { class: 'm-circ', html: MI.search, 'aria-label': '종목 검색', onclick: () => this.search(false) });
-      this.list = h('div', { class: 'mh-list' });
-      this.mini = this.buildMini();
-      const dock = h('div', { class: 'mh-dock' }, h('button', { class: 'm-circ lg', html: ICON.bell, 'aria-label': '가격 알림', onclick: () => this.alertsSheet() }), this.mini);
-      home.append(this.list, h('header', { class: 'mh-head' }, this.hLeft, this.hTitle, right), dock);
+      this.hEdit = h('button', { class: 'mh-tb', onclick: () => this.setEdit(!this.edit) });
+      this.hTitleS = h('span', { class: 'mh-nt' }); // 스크롤하면 위 막대 가운데에 나오는 작은 제목
+      const more = h('button', { class: 'm-circ sm', html: MI.dots, 'aria-label': '목록 메뉴', onclick: () => this.homeMenu() });
+      const add = h('button', { class: 'm-circ sm', html: ICON.plus, 'aria-label': '종목 추가', onclick: () => this.search(false) });
+      this.hNav = h('header', { class: 'mh-nav' }, this.hEdit, this.hTitleS, h('div', { class: 'mh-nr' }, more, add));
+      this.hTitle = h('button', { class: 'mh-lt', 'aria-label': '목록 바꾸기', onclick: () => { if (!this.edit) this.listsSheet(); } });
+      const sf = h('button', { class: 'mh-sf', onclick: () => this.search(false) }, h('span', { html: MI.search }), h('span', { text: '종목 검색' }));
+      this.listIn = h('div', { class: 'mh-in' });
+      this.list = h('div', { class: 'mh-list' }, h('div', { class: 'mh-top' }, this.hTitle, sf), this.listIn);
+      home.append(this.list, this.hNav, this.buildTabs());
       document.body.append(home);
+      this.list.addEventListener('scroll', () => this.home.classList.toggle('scrolled', this.list.scrollTop > 46), { passive: true });
       this.bindList();
       this.setEdit(false, true);
+    }
+    buildTabs() {
+      const tab = (k, icon, label, fn, extra) => h('button', { class: 'mt-tab' + (k === 'watch' ? ' on' : ''), 'data-k': k, onclick: fn },
+        h('span', { class: 'mt-ic', html: icon }, extra || null), h('span', { class: 'mt-l', text: label }));
+      this.tabBadge = h('i', { class: 'mt-badge hidden' });
+      this.tabChart = tab('chart', ICON.candle, '차트', () => this.showChart());
+      return h('nav', { class: 'mh-tabs' },
+        tab('watch', ICON.list, '관심종목', () => this.list.scrollTo({ top: 0, behavior: 'smooth' })),
+        this.tabChart,
+        tab('alert', ICON.bell, '알림', () => this.alertsSheet(), this.tabBadge),
+        tab('set', ICON.gear, '설정', () => this.app.openSettings()));
+    }
+    paintTabs() { // 차트 탭 = 지금 차트 종목, 알림 탭 = 기다리는 알림 수
+      const c = this.app.active;
+      if (this.tabChart && c) this.tabChart.querySelector('.mt-l').textContent = CL.tickOf(c.src, c.sym);
+      if (this.tabBadge) {
+        const n = this.app.alerts.filter((a) => a.active !== false && !a.fired).length;
+        this.tabBadge.textContent = n > 9 ? '9+' : String(n);
+        this.tabBadge.classList.toggle('hidden', !n);
+      }
     }
     setEdit(on, silent) {
       if (on && this.wl.list.virtual) { U.toast('깃발 목록은 편집할 수 없습니다', 'warn'); return; }
       this.edit = !!on;
       this.home.classList.toggle('editing', this.edit);
-      this.hLeft.innerHTML = this.edit ? '<span>완료</span>' : MI.dots;
-      this.hLeft.classList.toggle('txt', this.edit);
+      this.hEdit.textContent = this.edit ? '완료' : '편집';
+      this.hEdit.classList.toggle('done', this.edit);
       if (!silent) this.renderList();
     }
     onWl() { // 관심종목 데이터가 바뀜 (wl.save)
@@ -398,20 +445,23 @@
     }
     onNames() { this.renderList(); this.paintDetailHead(); this._pillK = ''; this.refreshChart(); }
     renderList() {
-      const wl = this.wl, L = wl.list, list = this.list;
+      const wl = this.wl, L = wl.list, list = this.list, box = this.listIn;
+      const title = this.edit ? '목록 편집' : L.name;
       this.hTitle.innerHTML = '';
-      this.hTitle.append(h('span', { text: this.edit ? '목록 편집' : L.name }));
+      this.hTitle.append(h('span', { text: title }));
       if (!this.edit) this.hTitle.append(h('i', { html: MI.down }));
+      this.hTitleS.textContent = title;
       const st = list.scrollTop;
-      list.innerHTML = '';
+      box.innerHTML = '';
       this.rows = new Map();
       const items = this.edit ? L.items.map((it, idx) => ({ it, idx })) : wl.displayItems();
-      if (!items.length) list.append(h('div', { class: 'mh-empty', html: L.virtual ? '깃발을 단 종목이 없습니다.<br>종목을 길게 누르면 깃발을 달 수 있어요.' : '종목이 없습니다.<br>오른쪽 위 <b>검색</b>으로 추가하세요.' }));
-      let col = false;
+      if (!items.length) box.append(h('div', { class: 'mh-empty', html: L.virtual ? '깃발을 단 종목이 없습니다.<br>종목을 길게 누르면 깃발을 달 수 있어요.' : '종목이 없습니다.<br>위의 <b>검색</b> 칸이나 <b>+</b>로 추가하세요.' }));
+      let col = false, grp = null;
       for (const { it, idx } of items) {
-        if (it.t === 'sec') { col = !this.edit && !!it.collapsed; list.append(this.secEl(it, idx)); continue; }
+        if (it.t === 'sec') { col = !this.edit && !!it.collapsed; grp = null; box.append(this.secEl(it, idx)); continue; }
         if (col) continue;
-        list.append(this.rowEl(it, idx));
+        if (!grp) grp = box.appendChild(h('div', { class: 'mr-grp' }));
+        grp.append(this.rowEl(it, idx));
       }
       list.scrollTop = st;
       for (const k of this.rows.keys()) this.paintRow(k);
@@ -425,15 +475,16 @@
     }
     rowEl(it, idx) {
       const k = it.src + ':' + it.sym, wl = this.wl, nm = wl.nameOf(it.src, it.sym), fl = wl.st.flags[k];
-      const R = { px: h('span', { class: 'mr-px' }), chg: h('span', { class: 'mr-chg' }), st: h('div', { class: 'mr-st', html: MI.moon + '<span>장 마감</span>' }) };
+      const R = { px: h('span', { class: 'mr-px' }), b: h('span', { class: 'mr-badge', role: 'button', 'aria-label': '변동률·변동액 바꾸기' }) };
       const row = h('div', { class: 'mr-row', 'data-k': k, 'data-i': idx },
         this.edit ? h('button', { class: 'mr-del', 'aria-label': '삭제', onclick: (e) => { e.stopPropagation(); wl.remove(idx); } }) : null,
         fl ? h('i', { class: 'mr-flag', style: { background: CL.FLAGC[fl] } }) : null,
-        CL.Logo.el(it.src, it.sym, 40, nm),
+        CL.Logo.el(it.src, it.sym, 36, nm),
         h('div', { class: 'mr-id' },
           h('div', { class: 'mr-t' }, h('b', { text: CL.tickOf(it.src, it.sym) }), it.src === 'stock' ? h('span', { class: 'mr-d', text: 'D', title: '지연 시세' }) : null),
           h('div', { class: 'mr-n', text: nm || CL.exOf(it.src, it.sym) })),
-        this.edit ? h('span', { class: 'mr-grip', html: MI.grip }) : h('div', { class: 'mr-q' }, R.px, R.chg, R.st));
+        this.edit ? h('span', { class: 'mr-grip', html: MI.grip }) : h('div', { class: 'mr-q' }, h('span', { class: 'mr-pl' }, h('span', { class: 'mr-moon', html: MI.moon, title: '장 마감' }), R.px), R.b));
+      R.row = row;
       if (!this.rows.has(k)) this.rows.set(k, []);
       this.rows.get(k).push(R);
       return row;
@@ -442,14 +493,17 @@
       const Rs = this.rows.get(k), q = QH().get(k);
       if (!Rs || !q || q.last == null) return;
       const d = this.precOf(k, q.last), set = this.set;
-      const col = q.chgP > 0 ? set.up : q.chgP < 0 ? set.dn : '';
+      const up = q.chgP > 0, dn = q.chgP < 0;
       const flash = q.flashAt && Date.now() - q.flashAt < 300 && q.dir;
       const closed = k.startsWith('stock:') && q.mopen === false;
+      // 변동 배지: 탭하면 변동률 ↔ 변동액 (모든 행 같이)
+      const txt = q.chgP == null ? '—' : set.mBadge === 'abs' && q.chgAbs != null ? sgn(q.chgAbs) + U.fmt(Math.abs(q.chgAbs), d) : pct(q.chgP);
       for (const R of Rs) {
         R.px.textContent = U.fmt(q.last, d);
-        R.chg.textContent = q.chgP != null ? (q.chgAbs != null ? sgn(q.chgAbs) + U.fmt(Math.abs(q.chgAbs), d) + '  ' : '') + pct(q.chgP) : '';
-        R.chg.style.color = col;
-        R.st.classList.toggle('on', closed);
+        R.b.textContent = txt;
+        R.b.style.background = up ? set.up : dn ? set.dn : '';
+        R.b.classList.toggle('flat', !up && !dn);
+        R.row.classList.toggle('closed', closed);
         if (flash) { R.px.classList.remove('fl-up', 'fl-dn'); void R.px.offsetWidth; R.px.classList.add(q.dir > 0 ? 'fl-up' : 'fl-dn'); }
       }
     }
@@ -495,6 +549,12 @@
       list.addEventListener('click', (e) => {
         if (this._lpFired) { this._lpFired = false; return; }
         if (this.edit) return;
+        if (e.target.closest('.mr-badge')) { // 변동률 ↔ 변동액
+          this.set.mBadge = this.set.mBadge === 'abs' ? 'pct' : 'abs';
+          this.app.saveSet();
+          for (const k of this.rows.keys()) this.paintRow(k);
+          return;
+        }
         const sec = e.target.closest('.mr-sec'), row = e.target.closest('.mr-row');
         if (sec) {
           const it = this.wl.list.items[+sec.dataset.i];
@@ -684,57 +744,7 @@
       return ok;
     }
 
-    /* ---------------- 미니 플레이어 (아래 알약: 지금 차트 종목) ---------------- */
-    buildMini() {
-      this.mLogo = h('span', { class: 'mm-logo' });
-      this.mSym = h('b'); this.mPx = h('span', { class: 'mm-px' }); this.mChg = h('span', { class: 'mm-chg' });
-      const sp = h('span', { class: 'mm-spark' });
-      const el = h('button', { class: 'mh-mini', 'aria-label': '차트 열기', onclick: () => this.showChart() },
-        this.mLogo, h('span', { class: 'mm-txt' }, h('span', { class: 'mm-l1' }, this.mSym, h('i', { text: '•' }), this.mPx), this.mChg),
-        sp, h('span', { class: 'mm-up', html: MI.up }));
-      this.spark = new Area(sp, { fill: true, fa: 0.22, padT: 5, padB: 5, padL: 2, padR: 7, ref: false, dot: true, lw: 1.6 });
-      return el;
-    }
-    paintMini() {
-      const c = this.app.active;
-      if (!c || !this.mLogo) return;
-      const k = c.key, q = QH().get(k) || {}, set = this.set;
-      if (this._miniK !== k) {
-        this._miniK = k;
-        this.mLogo.innerHTML = '';
-        this.mLogo.append(CL.Logo.el(c.src, c.sym, 38, c.dispName()));
-        this.mSym.textContent = CL.tickOf(c.src, c.sym);
-        this.sparkR = null;
-        this.spark.set([]);
-        this.loadSpark();
-      }
-      const last = q.last != null ? q.last : c.bars.length ? c.bars[c.bars.length - 1].c : null;
-      this.mPx.textContent = last != null ? U.fmt(last, this.precOf(k, last)) : '—';
-      this.mChg.textContent = q.chgP != null ? pct(q.chgP) + ' 오늘' : '';
-      const col = q.chgP > 0 ? set.up : q.chgP < 0 ? set.dn : '';
-      this.mChg.style.color = col;
-      const now = Date.now();
-      if (this.sparkR && this.sparkR.k === k && now - (this._spT || 0) > 1000) {
-        this._spT = now;
-        const [src] = splitKey(k);
-        this.live(this.sparkR.v, q, src, '1D');
-        this.spark.set(this.sparkR.v.pts, { col: col || set.up });
-      }
-    }
-    loadSpark() {
-      const c = this.app.active;
-      if (!c) return;
-      const k = c.key, tok = (this._spTok = (this._spTok || 0) + 1);
-      this.rangeData(c.src, c.sym, '1D').then((v) => {
-        if (tok !== this._spTok) return;
-        this.sparkR = { k, v };
-        this._spT = 0;
-        this.seedPrec(k, v);
-        this.paintMini();
-      }).catch(() => {});
-    }
-
-    /* ---------------- 기간별 데이터 (종목 시트·미니 플레이어) ---------------- */
+    /* ---------------- 기간별 데이터 (종목 시트) ---------------- */
     rcFresh(src, sym, rk) {
       const c = this.rc[src + ':' + sym + '|' + rk];
       return c && Date.now() - c.t < (rk === '1D' || rk === '1W' ? 6e4 : 6e5) ? c.v : null;
@@ -840,27 +850,31 @@
       E.name = h('b'); E.sub = h('span'); E.dot = h('i', { class: 'md-dot' });
       E.id = h('button', { class: 'md-id', onclick: () => this.search(true) },
         h('span', { class: 'md-n' }, E.name, h('span', { class: 'md-chev', html: MI.down })), h('span', { class: 'md-s' }, E.sub, E.dot));
-      const head = h('div', { class: 'md-head' }, E.logo, E.id, h('button', { class: 'm-circ sm', html: MI.dots, 'aria-label': '더 보기', onclick: () => this.detailMenu() }));
+      let S = null;
+      const head = h('div', { class: 'md-head' }, E.logo, E.id,
+        h('button', { class: 'm-circ sm', html: MI.dots, 'aria-label': '더 보기', onclick: () => this.detailMenu() }),
+        h('button', { class: 'm-circ sm', html: ICON.close, 'aria-label': '닫기', onclick: () => S && S.close() }));
       E.price = h('span', { class: 'md-price' }); E.cur = h('span', { class: 'md-cur' });
       E.chg = h('span', { class: 'md-chg' }); E.when = h('span', { class: 'md-when' });
       E.state = h('div', { class: 'md-state hidden' });
       E.msg = h('div', { class: 'md-msg hidden' });
       E.chart = h('div', { class: 'md-chart' });
-      this.area = new Area(E.chart, { axis: true, labels: true, padT: 22, padB: 16, onScrub: (p) => { this.scrubPt = p; this.paintDetail(); } });
-      E.chart.append(E.msg,
-        h('button', { class: 'md-fab l', html: MI.alarm, 'aria-label': '가격 알림 추가', onclick: () => this.alertFor(this.dKey) }),
-        h('button', { class: 'md-fab r', html: ICON.candle, 'aria-label': '차트 열기', onclick: () => this.openChartKey(this.dKey) }));
-      E.ranges = h('div', { class: 'md-ranges' });
-      for (const [k, n] of RANGES) E.ranges.append(h('button', { class: 'md-rg', 'data-k': k, text: n, onclick: () => { this.dRange = k; this.set.mRange = k; this.app.saveSet(); this.loadRange(); } }));
-      E.ranges.append(h('button', { class: 'md-rg ic', html: ICON.full, 'aria-label': '전체 화면 차트', onclick: () => this.openChartKey(this.dKey) }));
-      E.tabs = h('div', { class: 'md-tabs' });
-      for (const [k, n] of [['ov', '개요'], ['perf', '성과'], ['al', '알림']]) E.tabs.append(h('button', { class: 'md-tab', 'data-k': k, text: n, onclick: () => { this.set.mDetTab = k; this.app.saveSet(); this.renderTab(); } }));
+      this.area = new Area(E.chart, { axis: true, labels: true, padT: 18, padB: 12, onScrub: (p) => { this.scrubPt = p; this.paintDetail(); } });
+      E.chart.append(E.msg);
+      // 기간: 세그먼트 컨트롤
+      E.ranges = h('div', { class: 'm-seg md-seg' });
+      for (const [k, n] of RANGES) E.ranges.append(h('button', { class: 'm-sgb', 'data-k': k, text: n, onclick: () => { this.dRange = k; this.set.mRange = k; this.app.saveSet(); this.loadRange(); } }));
+      const acts = h('div', { class: 'md-acts' },
+        h('button', { class: 'md-act', onclick: () => this.alertFor(this.dKey) }, h('span', { html: MI.alarm }), h('span', { text: '가격 알림' })),
+        h('button', { class: 'md-act pri', onclick: () => this.openChartKey(this.dKey) }, h('span', { html: ICON.candle }), h('span', { text: '차트 열기' })));
+      E.tabs = h('div', { class: 'm-seg md-tabs' });
+      for (const [k, n] of [['ov', '개요'], ['perf', '성과'], ['al', '알림']]) E.tabs.append(h('button', { class: 'm-sgb', 'data-k': k, text: n, onclick: () => { this.set.mDetTab = k; this.app.saveSet(); this.renderTab(); } }));
       E.tb = h('div', { class: 'md-tb' });
       const body = h('div', { class: 'md' }, head, h('div', { class: 'md-px' }, E.price, E.cur), h('div', { class: 'md-chgrow' }, E.chg, E.when), E.state,
-        E.chart, E.ranges, h('button', { class: 'md-cta', text: '차트 열기', onclick: () => this.openChartKey(this.dKey) }), E.tabs, E.tb);
-      this.det = this.sheet({
+        E.ranges, E.chart, acts, E.tabs, E.tb);
+      this.det = S = this.sheet({
         cls: 'ms-detail', body, dragEl: head,
-        onClose: () => { this.dE = null; this.dKey = null; this.det = null; this.dData = null; this.scrubPt = null; this.app.trackQuotes(); },
+        onClose: () => { if (this.area) this.area.ro.disconnect(); this.dE = null; this.dKey = null; this.det = null; this.dData = null; this.scrubPt = null; this.app.trackQuotes(); },
       });
       this.setDetail(key);
     }
@@ -872,7 +886,7 @@
       const [src, s] = splitKey(key);
       if (this.det && this.det.body) this.det.body.scrollTop = 0;
       E.logo.innerHTML = '';
-      E.logo.append(CL.Logo.el(src, s, 44, this.wl.nameOf(src, s)));
+      E.logo.append(CL.Logo.el(src, s, 40, this.wl.nameOf(src, s)));
       this.paintDetailHead();
       this.app.trackQuotes();
       this.loadRange();
@@ -916,9 +930,9 @@
       const base = this.baseOf(v, q, rk);
       const last = q.last != null ? q.last : v.pts.length ? v.pts[v.pts.length - 1].c : null;
       const up = last == null || base == null || last >= base;
-      this.area.set(v.pts, {
-        col: up ? this.set.up : this.set.dn, rk, dim: L ? '#6e6e73' : '#8e8e93',
-        lblBg: L ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.6)', dash: L ? 'rgba(0,0,0,.3)' : 'rgba(160,160,160,.5)',
+      this.area.set(v.pts, { // 1일 차트에는 전일 종가 점선
+        col: up ? this.set.up : this.set.dn, rk, dim: L ? '#6e6e73' : '#8e8e93', base: rk === '1D' ? base : null,
+        grid: L ? 'rgba(0,0,0,.1)' : 'rgba(255,255,255,.12)', dash: L ? 'rgba(0,0,0,.35)' : 'rgba(200,200,205,.55)',
       });
     }
     paintDetail() {
@@ -988,8 +1002,8 @@
           const t0 = Date.now() - 365 * DAY;
           for (const b of daily) if (b.t >= t0) { w52h = w52h == null || b.h > w52h ? b.h : w52h; w52l = w52l == null || b.l < w52l ? b.l : w52l; }
         }
-        box.append(rangeRow('일간 범위', q.low, q.high, last), rangeRow('52주 범위', w52l, w52h, last));
-        const g = h('div', { class: 'md-grid' });
+        box.append(h('div', { class: 'md-card' }, rangeRow('일간 범위', q.low, q.high, last), rangeRow('52주 범위', w52l, w52h, last)));
+        const g = h('div', { class: 'md-grid md-card' });
         const cell = (n, v) => g.append(h('div', { class: 'md-cell' }, h('span', { text: n }), h('b', { text: v })));
         const f = (v) => (v != null ? U.fmt(v, d) : '—');
         cell('시가', f(q.open)); cell('전일 종가', f(q.base));
@@ -1014,7 +1028,8 @@
         const list = this.app.alerts.filter((a) => a.src + ':' + a.sym === k);
         box.append(h('button', { class: 'md-add', html: MI.alarm + '<span>가격 알림 추가</span>', onclick: () => this.alertFor(k) }));
         if (!list.length) box.append(h('div', { class: 'md-load', text: '이 종목의 알림이 없습니다' }));
-        for (const a of list.slice().reverse()) box.append(this.alertRow(a, () => this.renderTab()));
+        const card = list.length ? box.appendChild(h('div', { class: 'md-card ma-card' })) : null;
+        for (const a of list.slice().reverse()) card.append(this.alertRow(a, () => this.renderTab()));
         box.append(h('div', { class: 'md-note', text: '알림은 이 페이지가 열려 있을 때 울립니다.' }));
       }
     }
@@ -1041,7 +1056,7 @@
     }
     alertRow(a, rerender) {
       const app = this.app, cond = { cross: '교차', up: '상향 돌파', down: '하향 돌파' }[a.cond] || '';
-      const done = () => { U.save('alerts', app.alerts); app.trackQuotes(); app.charts.forEach((x) => x.invalidate()); rerender(); };
+      const done = () => { U.save('alerts', app.alerts); app.trackQuotes(); app.charts.forEach((x) => x.invalidate()); rerender(); this.paintTabs(); };
       return h('div', { class: 'ma-row' + (a.fired ? ' fired' : '') },
         CL.Logo.el(a.src, a.sym, 34, this.wl.nameOf(a.src, a.sym)),
         h('div', { class: 'ma-id' },
@@ -1059,9 +1074,11 @@
         box.append(h('div', { class: 'ma-top' },
           c ? h('button', { class: 'md-add', html: MI.alarm + '<span>' + U.esc(CL.tickOf(c.src, c.sym)) + ' 알림 추가</span>', onclick: () => app.openAlertDialog(c) }) : null,
           app.alerts.some((a) => a.fired) ? h('button', { class: 'ma-clear', text: '울린 알림 지우기', onclick: () => { app.alerts = app.alerts.filter((a) => !a.fired); U.save('alerts', app.alerts); app.charts.forEach((x) => x.invalidate()); S.render(); } }) : null));
-        if (!app.alerts.length) box.append(h('div', { class: 'md-load', text: '알림이 없습니다. 종목 시트의 종 버튼이나 차트 ⋯ 메뉴에서 추가하세요.' }));
-        for (const a of app.alerts.slice().reverse()) box.append(this.alertRow(a, () => S.render()));
+        if (!app.alerts.length) box.append(h('div', { class: 'md-load', text: '알림이 없습니다. 종목 시트의 "가격 알림"이나 차트 ⋯ 메뉴에서 추가하세요.' }));
+        const card = app.alerts.length ? box.appendChild(h('div', { class: 'md-card ma-card' })) : null;
+        for (const a of app.alerts.slice().reverse()) card.append(this.alertRow(a, () => S.render()));
         box.append(h('div', { class: 'md-note', text: '알림은 이 페이지가 열려 있을 때 울립니다.' }));
+        this.paintTabs();
       };
       S.render();
       this.alS = S;
@@ -1071,21 +1088,25 @@
     buildChart() {
       const app = this.app;
       this.appEl = U.$('#app'); this.center = U.$('#center');
-      this.cMin = h('button', { class: 'm-circ mc-min', html: MI.down, 'aria-label': '차트 닫기', onclick: () => this.hideChart() });
+      // 위 막대: ‹ 관심종목 | 종목·주기(탭 = 주기 바꾸기) | ⋯   — 그리는 중에는: 취소 | 도구 이름·도움말 | 완료
+      this.navBack = h('button', { class: 'mc-back', 'aria-label': '관심종목으로' }, h('span', { html: MI.left }), h('span', { text: '관심종목' }));
+      this.navBack.onclick = () => this.hideChart();
+      this.navTitle = h('button', { class: 'mc-ttl', 'aria-label': '주기 바꾸기', onclick: () => this.ivSheet() });
+      this.navTool = h('div', { class: 'mc-tool' });
+      this.nav = h('header', { class: 'mc-nav' }, this.navBack, this.navTitle,
+        h('button', { class: 'm-circ sm mc-more', html: MI.dots, 'aria-label': '더 보기', onclick: () => this.chartMenu() }), this.navTool);
+      this.appEl.insertBefore(this.nav, this.center);
       this.favBar = h('div', { class: 'mc-fav' });
       this.undoB = h('button', { class: 'm-circ mc-undo hidden', html: ICON.undo, 'aria-label': '되돌리기', onclick: () => { app.active.undo(); this.refreshUndo(); } });
       this.redoB = h('button', { class: 'm-circ mc-redo hidden', html: ICON.redo, 'aria-label': '다시 실행', onclick: () => { app.active.redo(); this.refreshUndo(); } });
-      this.center.append(this.cMin, this.favBar, this.undoB, this.redoB);
-      this.cbSym = h('button', { class: 'mc-symb', 'aria-label': '종목 바꾸기', onclick: () => app.openSearch(app.active) });
-      this.cbIv = h('button', { class: 'mc-ivb', 'aria-label': '주기 바꾸기', onclick: () => this.ivSheet() });
-      this.chip = h('div', { class: 'mc-chip' });
-      this.cbL = h('div', { class: 'mc-pill mc-l' }, this.cbSym, this.cbIv, this.chip);
-      this.cbFav = h('button', { class: 'mc-b', html: MI.favbar, 'aria-label': '즐겨찾는 드로잉 막대', onclick: () => { this.set.mFavBar = !this.set.mFavBar; app.saveSet(); this.renderFav(); } });
-      this.cbar = h('div', { class: 'mc-bar' }, this.cbL,
-        h('div', { class: 'mc-pill mc-r' },
-          h('button', { class: 'mc-b', html: MI.pencil, 'aria-label': '드로잉', onclick: () => this.drawSheet() }),
-          this.cbFav,
-          h('button', { class: 'mc-b', html: MI.dots, 'aria-label': '더 보기', onclick: () => this.chartMenu() })));
+      this.center.append(this.favBar, this.undoB, this.redoB);
+      // 아래 도구 막대 (아이콘 + 이름)
+      const tb = (icon, label, fn) => h('button', { class: 'mc-tbi', onclick: fn }, h('span', { class: 'mc-tbic', html: icon }), h('span', { class: 'mc-tbl', text: label }));
+      this.tbIv = tb(MI.clock, '주기', () => this.ivSheet());
+      this.tbType = tb(ICON.candle, '유형', () => this.typeSheet());
+      this.cbar = h('nav', { class: 'mc-tb' },
+        tb(MI.search, '종목', () => app.openSearch(app.active)), this.tbIv,
+        tb(MI.pencil, '그리기', () => this.drawSheet()), tb(ICON.ind, '지표', () => app.openIndicators(app.active)), this.tbType);
       this.appEl.append(this.cbar);
     }
     showChart(noAnim) {
@@ -1107,7 +1128,7 @@
       if (app.tool !== 'cursor') app.setTool('cursor');
       if (c) { if (c.sel) c.select(null); c.mouse.in = false; c.invalidate(); }
       this.set.mScreen = 'home'; app.saveSet();
-      this.paintMini();
+      this.paintTabs();
       if (this.dE && c && this.dKey !== c.key) this.setDetail(c.key); // 차트에서 종목을 바꿨으면 시트도 따라감
     }
     openChartKey(key) {
@@ -1121,15 +1142,16 @@
     }
     refreshChart() {
       const c = this.app.active;
-      if (!c || !this.cbSym) return;
-      const nm = c.dispName(), k = c.key + '|' + nm;
+      if (!c || !this.navTitle) return;
+      const nm = c.dispName(), k = c.key + '|' + nm + '|' + c.iv;
       if (this._pillK !== k) {
         this._pillK = k;
-        this.cbSym.innerHTML = '';
-        this.cbSym.append(CL.Logo.el(c.src, c.sym, 34, nm), h('b', { text: CL.tickOf(c.src, c.sym) }));
+        this.navTitle.innerHTML = '';
+        this.navTitle.append(CL.Logo.el(c.src, c.sym, 22, nm), h('b', { text: CL.tickOf(c.src, c.sym) }), h('span', { class: 'mc-iv', text: IVN(c.iv) }), h('i', { html: MI.down }));
       }
-      this.cbIv.textContent = IVN(c.iv);
-      this.paintMini();
+      this.tbIv.querySelector('.mc-tbl').textContent = IVN(c.iv);
+      this.tbType.querySelector('.mc-tbic').innerHTML = ICON[c.type] || ICON.candle;
+      this.paintTabs();
     }
     onChartLoaded(c) {
       if (c !== this.app.active) return;
@@ -1163,23 +1185,24 @@
       for (const k of keys) {
         if (this.rows.has(k)) this.paintRow(k);
         if (k === this.dKey) this.onDetailQuote();
-        if (k === ak) this.paintMini();
       }
     }
-    /* 그리는 중이면 왼쪽 알약이 도구 칩(이름·도움말·완료·끝내기)으로 바뀜 */
+    /* 그리는 중이면 위 막대가 "취소 | 도구 이름·도움말 | 완료"로 바뀜 */
     onTool() {
       const app = this.app, t = app.tool, T = TL(), on = t !== 'cursor';
-      this.cbL.classList.toggle('tool', on);
-      this.chip.innerHTML = '';
+      this.nav.classList.toggle('tool', on);
+      this.navTool.innerHTML = '';
       if (on) {
         const def = T[t];
         const name = def ? def.name : { eraser: '지우개', measure: '측정', zoom: '영역 확대' }[t] || t;
         const hint = def ? (def.n === 0 ? '점을 탭해서 잇고 → 완료' : def.free ? '손가락으로 그리기' : def.n === 1 ? '놓을 곳을 탭' : def.n === 2 ? '두 점을 탭하세요' : '점 ' + def.n + '개를 차례로 탭')
           : t === 'eraser' ? '지울 드로잉을 탭' : t === 'measure' ? '끌거나 두 점을 탭' : '확대할 영역을 끌기';
         const c = () => app.active;
-        this.chip.append(h('span', { class: 'mc-chip-ic', html: ICON[t] || '' }), h('span', { class: 'mc-chip-t' }, h('b', { text: name }), h('small', { text: hint })));
-        if (def && def.n === 0) this.chip.append(h('button', { class: 'mc-chip-ok', text: '완료', onclick: () => { if (c().creating) c().createFinishMulti(); else app.setTool('cursor'); } }));
-        this.chip.append(h('button', { class: 'mc-chip-x', html: ICON.close, 'aria-label': '그리기 끝내기', onclick: () => { const cc = c(); if (cc.creating) cc.cancelCreate(); if (cc.measure) { cc.measure = null; cc.invalidate(); } app.setTool('cursor'); } }));
+        const cancel = () => { const cc = c(); if (cc.creating) cc.cancelCreate(); if (cc.measure) { cc.measure = null; cc.invalidate(); } app.setTool('cursor'); };
+        this.navTool.append(
+          h('button', { class: 'mc-tl', text: '취소', onclick: cancel }),
+          h('div', { class: 'mc-tt' }, h('b', {}, h('span', { class: 'mc-ti', html: ICON[t] || '' }), h('span', { text: name })), h('small', { text: hint })),
+          def && def.n === 0 ? h('button', { class: 'mc-tr', text: '완료', onclick: () => { if (c().creating) c().createFinishMulti(); else app.setTool('cursor'); } }) : h('span', { class: 'mc-tr' }));
       }
       this.renderFav();
     }
@@ -1187,7 +1210,6 @@
       const bar = this.favBar, app = this.app, T = TL(), c = app.active;
       if (!bar) return;
       bar.innerHTML = '';
-      this.cbFav.classList.toggle('on', !!this.set.mFavBar);
       const hide = !this.set.mFavBar || !!(c && c.sel);
       bar.classList.toggle('hidden', hide);
       if (hide) return;
@@ -1291,16 +1313,21 @@
       render();
     }
 
-    /* ================= 드로잉 시트 (트레이딩뷰 앱처럼: 찾기 + 분류 탭 + 카드) ================= */
+    /* ================= 드로잉 시트 (iOS 목록: 찾기 + 분류 + 행·스위치·세그먼트) ================= */
     drawSheet() {
       const app = this.app, set = this.set, T = TL();
       let tab = this._dTab || 'tools', q = '';
-      const inp = h('input', { class: 'ds-in', type: 'search', placeholder: '찾기', enterkeyhint: 'search', autocomplete: 'off' });
+      const inp = h('input', { class: 'ds-in', type: 'search', placeholder: '도구 찾기', enterkeyhint: 'search', autocomplete: 'off' });
       const tabs = h('div', { class: 'ds-tabs' });
       const body = h('div', { class: 'ds-body' });
       const S = this.sheet({ title: '드로잉', cls: 'ms-draw', body: h('div', { class: 'ds' }, h('label', { class: 'ds-search' }, h('span', { html: MI.search }), inp), tabs, body) });
       const c = () => app.active;
       const pick = (t) => { S.close(); app.setTool(t); };
+      const redraw = () => app.charts.forEach((x) => x.invalidate());
+      const grp = (title) => { if (title) body.append(h('div', { class: 'ds-sub', text: title })); return body.appendChild(h('div', { class: 'ds-grp' })); };
+      const row = (o) => h('div', { class: 'ds-row' + (o.on ? ' on' : '') + (o.dis ? ' dis' : '') + (o.danger ? ' danger' : ''), role: 'button', onclick: () => { if (!o.dis && o.fn) o.fn(); } },
+        h('span', { class: 'ds-ic', html: o.icon || '' }), h('span', { class: 'ds-n' }, h('span', { text: o.n }), o.sub ? h('small', { text: o.sub }) : null),
+        o.right || (o.chev ? h('span', { class: 'ds-chev', html: MI.right }) : null));
       const star = (t) => {
         const on = set.mFav.includes(t);
         return h('button', {
@@ -1316,48 +1343,38 @@
           },
         });
       };
-      const toolCard = (t) => h('div', { class: 'ds-card' + (app.tool === t ? ' on' : ''), role: 'button', onclick: () => pick(t) },
-        h('span', { class: 'ds-ic', html: ICON[t] || '' }), h('span', { class: 'ds-n', text: T[t].name }), star(t));
-      const actCard = (o) => h('div', {
-        class: 'ds-card' + (o.fill ? ' fill' : '') + (o.on ? ' on' : '') + (o.more ? ' has-more' : '') + (o.dis ? ' dis' : ''), role: 'button',
-        onclick: () => { if (!o.dis) o.fn(); },
-      }, h('span', { class: 'ds-ic', html: o.icon || '' }), h('span', { class: 'ds-n', text: o.n }),
-      o.more ? h('button', { class: 'ds-more', html: MI.vdots, 'aria-label': '옵션', onclick: (e) => { e.stopPropagation(); o.more(); } }) : null);
-      const redraw = () => app.charts.forEach((x) => x.invalidate());
-      const actions = () => [
-        { icon: ICON.measure, n: '측정', fill: true, on: app.tool === 'measure', fn: () => pick('measure') },
-        { icon: ICON.eraser, n: '지우개', fill: true, on: app.tool === 'eraser', fn: () => pick('eraser') },
-        { icon: ICON.stay, n: '계속 그리기', on: !!set.stayDraw, fn: () => { set.stayDraw = !set.stayDraw; app.saveSet(); U.toast(set.stayDraw ? '계속 그리기 켬 — 그린 뒤에도 도구가 유지됩니다' : '계속 그리기 끔', '', 1600); render(); } },
-        {
-          icon: set.hideAll ? ICON.eyeOff : ICON.eye, n: set.hideAll ? '드로잉 보이기' : '드로잉 숨기기', on: !!set.hideAll,
-          fn: () => { set.hideAll = !set.hideAll; app.saveSet(); redraw(); render(); },
-          more: () => this.menuSheet('숨기기', [
-            { icon: ICON.eyeOff, n: '모든 드로잉 숨기기', check: !!set.hideAll, fn: () => { set.hideAll = true; app.saveSet(); redraw(); } },
-            { icon: ICON.eye, n: '숨긴 드로잉 모두 보이기', fn: () => { set.hideAll = false; app.saveSet(); const cc = c(); cc.drawings.forEach((d) => (d.hidden = false)); cc.commit(); redraw(); } },
-            { icon: ICON.ind, n: '지표 모두 숨기기 / 보이기', fn: () => { const cc = c(), any = cc.inds.some((x) => !x.hidden); cc.inds.forEach((x) => (x.hidden = any)); cc.buildLegend(); cc.commit(); cc.invalidate(); } },
-          ], render),
-        },
-        { icon: set.lockAll ? ICON.lock : ICON.unlock, n: set.lockAll ? '드로잉 잠금 풀기' : '모든 드로잉 잠금', on: !!set.lockAll, fn: () => { set.lockAll = !set.lockAll; app.saveSet(); render(); } },
-        {
-          icon: ICON.magnet, n: set.magnet === 2 ? '강한 자석' : set.magnet === 1 ? '약한 자석' : '자석 꺼짐', on: !!set.magnet,
-          fn: () => { set.magnet = set.magnet ? 0 : 1; app.saveSet(); render(); },
-          more: () => this.menuSheet('자석', [
-            { icon: ICON.magnet, n: '약한 자석 (가까우면 시·고·저·종에 붙음)', check: set.magnet === 1, fn: () => { set.magnet = 1; app.saveSet(); } },
-            { icon: ICON.magnet, n: '강한 자석 (항상 붙음)', check: set.magnet === 2, fn: () => { set.magnet = 2; app.saveSet(); } },
-            { icon: ICON.close, n: '자석 끄기', check: !set.magnet, fn: () => { set.magnet = 0; app.saveSet(); } },
-          ], render),
-        },
-        {
-          icon: ICON.trash, n: '모든 드로잉 제거', fn: () => app.confirm('이 종목의 드로잉을 모두 지울까요? (되돌리기 가능)', () => c().removeAllDrawings()),
-          more: () => this.menuSheet('제거', [
-            { icon: ICON.trash, n: '이 종목 드로잉 모두 제거', danger: true, fn: () => app.confirm('이 종목의 드로잉을 모두 지울까요? (되돌리기 가능)', () => c().removeAllDrawings()) },
-            { icon: ICON.trash, n: '지표 모두 제거', danger: true, fn: () => app.confirm('이 차트의 지표를 모두 지울까요?', () => { const cc = c(); cc.inds.slice().forEach((x) => cc.removeInd(x.id)); }) },
-          ]),
-        },
-        { icon: ICON.zoom, n: '확대 (영역 선택)', on: app.tool === 'zoom', fn: () => pick('zoom') },
-        { icon: MI.zoomOut, n: '축소 (확대 되돌리기)', dis: !(c().zoomHist && c().zoomHist.length), fn: () => { c().zoomBack(); render(); } },
+      const toolRow = (t) => row({ icon: ICON[t], n: T[t].name, on: app.tool === t, fn: () => pick(t), right: star(t) });
+      const swRow = (icon, n, sub, key, after) => { // 행 전체를 눌러도 스위치가 바뀜
+        const i = h('input', { type: 'checkbox', 'aria-label': n });
+        i.checked = !!set[key];
+        i.addEventListener('click', (e) => e.stopPropagation());
+        i.addEventListener('change', () => { set[key] = i.checked; app.saveSet(); if (after) after(i.checked); });
+        return row({ icon, n, sub, right: i, fn: () => { i.checked = !i.checked; i.dispatchEvent(new Event('change')); } });
+      };
+      const actions = [
+        { icon: ICON.measure, n: '측정', sub: '기간·가격 변화 재기', t: 'measure' },
+        { icon: ICON.eraser, n: '지우개', sub: '탭한 드로잉 지우기', t: 'eraser' },
+        { icon: ICON.zoom, n: '영역 확대', sub: '끌어서 고른 곳을 크게', t: 'zoom' },
       ];
-      const emojiCard = () => actCard({ icon: ICON.emoji, n: '이모지 · 아이콘', fn: () => {
+      const renderTools = () => {
+        let g = grp('도구');
+        for (const a of actions) g.append(row({ icon: a.icon, n: a.n, sub: a.sub, on: app.tool === a.t, chev: true, fn: () => pick(a.t) }));
+        g.append(row({ icon: MI.zoomOut, n: '확대 되돌리기', dis: !(c().zoomHist && c().zoomHist.length), fn: () => { c().zoomBack(); render(); } }));
+        g = grp('설정');
+        g.append(swRow(ICON.stay, '계속 그리기', '그린 뒤에도 도구 유지', 'stayDraw'),
+          swRow(MI.favbar, '즐겨찾기 막대', '차트 위에 자주 쓰는 도구', 'mFavBar', () => this.renderFav()),
+          swRow(ICON.eyeOff, '드로잉 숨기기', null, 'hideAll', redraw),
+          swRow(ICON.lock, '드로잉 잠금', '실수로 옮기지 않게', 'lockAll'));
+        g = grp('자석 — 시·고·저·종에 붙이기');
+        const seg = h('div', { class: 'm-seg ds-seg' });
+        for (const [v, n] of [[0, '끄기'], [1, '약하게'], [2, '강하게']]) seg.append(h('button', { class: 'm-sgb' + ((set.magnet || 0) === v ? ' on' : ''), text: n, onclick: () => { set.magnet = v; app.saveSet(); render(); } }));
+        g.append(h('div', { class: 'ds-segrow' }, seg));
+        g = grp();
+        g.append(row({ icon: ICON.eye, n: '숨긴 드로잉 모두 보이기', fn: () => { set.hideAll = false; app.saveSet(); const cc = c(); cc.drawings.forEach((d) => (d.hidden = false)); cc.commit(); redraw(); render(); U.toast('숨긴 드로잉을 모두 보이게 했어요', '', 1400); } }),
+          row({ icon: ICON.trash, n: '이 종목 드로잉 모두 지우기', danger: true, fn: () => app.confirm('이 종목의 드로잉을 모두 지울까요? (되돌리기 가능)', () => c().removeAllDrawings()) }),
+          row({ icon: ICON.trash, n: '지표 모두 지우기', danger: true, fn: () => app.confirm('이 차트의 지표를 모두 지울까요?', () => { const cc = c(); cc.inds.slice().forEach((x) => cc.removeInd(x.id)); }) }));
+      };
+      const emojiRow = () => row({ icon: ICON.emoji, n: '이모지 · 아이콘', chev: true, fn: () => {
         const g = h('div', { class: 'ds-emo' });
         let E2 = null;
         for (const em of CL.EMOJIS) g.append(h('button', { class: 'ds-emo-b', text: em, onclick: () => { app.emojiPick = em; E2.close(); S.close(); app.setTool('emoji'); } }));
@@ -1367,29 +1384,30 @@
         tabs.querySelectorAll('.ds-tab').forEach((b) => b.classList.toggle('on', !q && b.dataset.k === tab));
         body.innerHTML = '';
         if (q) {
-          const ql = q.toLowerCase(), grid = h('div', { class: 'ds-grid' });
-          for (const o of actions()) if (o.n.toLowerCase().includes(ql)) grid.append(actCard(o));
-          for (const g of CL.TOOLGROUPS) for (const t of g.tools) if (t[0] !== '|' && t[0] !== '@' && T[t] && (T[t].name + ' ' + t).toLowerCase().includes(ql)) grid.append(toolCard(t));
-          body.append(grid.children.length ? grid : h('div', { class: 'ds-empty', text: '"' + q + '"에 맞는 도구가 없습니다' }));
+          const ql = q.toLowerCase(), g = grp();
+          for (const a of actions) if (a.n.includes(ql)) g.append(row({ icon: a.icon, n: a.n, sub: a.sub, chev: true, fn: () => pick(a.t) }));
+          for (const G of CL.TOOLGROUPS) for (const t of G.tools) if (t[0] !== '|' && t[0] !== '@' && T[t] && (T[t].name + ' ' + t).toLowerCase().includes(ql)) g.append(toolRow(t));
+          if (!g.children.length) { g.remove(); body.append(h('div', { class: 'ds-empty', text: '"' + q + '"에 맞는 도구가 없습니다' })); }
           return;
         }
-        if (tab === 'tools') { const grid = h('div', { class: 'ds-grid' }); for (const o of actions()) grid.append(actCard(o)); body.append(grid); return; }
-        const g = CL.TOOLGROUPS.find((x) => x.id === tab);
-        if (!g) return;
-        let cur = null;
-        for (const t of g.tools) {
-          if (t[0] === '|' || !cur) { cur = h('div', { class: 'ds-grid' }); if (t[0] === '|') body.append(h('div', { class: 'ds-sub', text: t.slice(1) })); body.append(cur); if (t[0] === '|') continue; }
+        if (tab === 'tools') { renderTools(); return; }
+        const G = CL.TOOLGROUPS.find((x) => x.id === tab);
+        if (!G) return;
+        let g = null;
+        for (const t of G.tools) {
+          if (t[0] === '|') { g = grp(t.slice(1)); continue; }
+          if (!g) g = grp();
           if (t[0] === '@') {
             const k = t.slice(1), IND = CL.IND;
-            cur.append(actCard({ icon: ICON[k] || '', n: IND[k].name + ' (지표)', fn: () => { S.close(); app.active.addInd(k); U.toast(IND[k].short + ' 추가됨 · 범례를 탭하면 설정'); } }));
+            g.append(row({ icon: ICON[k] || '', n: IND[k].name, sub: '지표로 추가', chev: true, fn: () => { S.close(); app.active.addInd(k); U.toast(IND[k].short + ' 추가됨 · 범례를 탭하면 설정'); } }));
             continue;
           }
-          if (T[t]) cur.append(toolCard(t));
+          if (T[t]) g.append(toolRow(t));
         }
-        if (tab === 'text' && cur) cur.append(emojiCard());
-        body.append(h('div', { class: 'ds-hint', text: '☆를 누르면 차트 아래 즐겨찾기 막대에 들어갑니다' }));
+        if (tab === 'text' && g) g.append(emojiRow());
+        body.append(h('div', { class: 'ds-hint', text: '☆를 누르면 차트 위 즐겨찾기 막대에 들어갑니다' }));
       };
-      for (const [k, n] of [['tools', '툴']].concat(CL.TOOLGROUPS.map((g) => [g.id, GSHORT[g.id] || g.name]))) {
+      for (const [k, n] of [['tools', '기본']].concat(CL.TOOLGROUPS.map((g) => [g.id, GSHORT[g.id] || g.name]))) {
         tabs.append(h('button', { class: 'ds-tab', 'data-k': k, text: n, onclick: () => { tab = k; this._dTab = k; q = ''; inp.value = ''; render(); body.scrollTop = 0; } }));
       }
       inp.addEventListener('input', () => { q = inp.value.trim(); render(); });

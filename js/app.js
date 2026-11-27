@@ -5,12 +5,12 @@
   const h = U.h;
 
   const DEFAULT_SET = {
-    theme: 'dark', colorMode: 'global', up: '#089981', dn: '#f23645', line: '#2962ff',
+    theme: 'dark', colorMode: 'global', up: '#30d158', dn: '#ff453a', line: '#0a84ff',
     grid: true, wm: true, hiLo: true, lastLine: true, countdown: true, indLabels: true,
     cursor: 'cross', magnet: 0, stayDraw: false, lockAll: false, hideAll: false,
     rightBars: 8, tz: 'local', syncCross: true, layout: '1', zoomAnchor: 'cursor', panel: true, panelTab: 'watch',
   };
-  const COLOR_MODES = { global: { up: '#089981', dn: '#f23645' }, kr: { up: '#f04452', dn: '#3182f6' } };
+  const COLOR_MODES = { global: { up: '#30d158', dn: '#ff453a' }, kr: { up: '#ff3b30', dn: '#0a84ff' } };
   const DEF_INDS = [{ type: 'vol' }, { type: 'mas' }, { type: 'rsi' }];
   const DEFAULT_SLOTS = [
     { src: 'upbit', sym: 'KRW-BTC', iv: '1h', inds: DEF_INDS },
@@ -38,6 +38,9 @@
   class App {
     constructor() {
       this.set = Object.assign({}, DEFAULT_SET, U.load('set', {}));
+      // 캔들 색이 프리셋(해외식·국내식)이면 지금 팔레트 색을 따름 — 예전 저장값(구 색)도 새 색으로
+      if (COLOR_MODES[this.set.colorMode]) Object.assign(this.set, COLOR_MODES[this.set.colorMode]);
+      if (/^#2962ff$/i.test(this.set.line || '')) this.set.line = DEFAULT_SET.line;
       U.tzMode = this.set.tz;
       this.tool = 'cursor';
       this.toolDefaults = U.load('toolDefaults', {});
@@ -51,7 +54,7 @@
       this.el = {
         top: U.$('#top'), left: U.$('#left'), charts: U.$('#charts'), panel: U.$('#rpanel'), rbar: U.$('#rbar'), status: U.$('#status'),
       };
-      // 폰이면 트레이딩뷰 앱 같은 모바일 화면 (mobile.js). 설정 → 화면에서 바꿀 수 있음
+      // 폰이면 모바일 화면 (mobile.js). 설정 → 화면에서 바꿀 수 있음
       this.mobile = !!(CL.Mobile && CL.Mobile.want());
       if (this.mobile) document.body.classList.add('mobile');
       this.wl = new CL.Watchlist(this);
@@ -334,13 +337,14 @@
       const rep = h('button', { class: 'tbtn wide', title: '바 리플레이', onclick: () => this.startReplaySelect() }, h('span', { class: 'ic', html: ICON.replay }), '리플레이');
       const alert = h('button', { class: 'tbtn wide', title: '가격 알림 추가', onclick: () => this.openAlertDialog(this.active) }, h('span', { class: 'ic', html: ICON.bell }), '알림');
       const sp = h('div', { class: 'grow' });
+      this.tb.panelBox = h('div', { class: 'tseg', title: '사이드바' }); // 관심종목·알림·객체 트리 (buildRight가 채움)
       const shot = h('button', { class: 'tbtn ic', title: '스크린샷 저장', html: ICON.camera, onclick: () => this.screenshot() });
       const theme = h('button', { class: 'tbtn ic', title: '다크/라이트 (설정에서 네이비·배경색 선택)', html: ICON.moon, onclick: () => { this.set.theme = this.set.theme === 'light' ? 'dark' : 'light'; this.saveSet(); this.applyTheme(); } });
       const set = h('button', { class: 'tbtn ic', title: '설정', html: ICON.gear, onclick: () => this.openSettings() });
       const help = h('button', { class: 'tbtn ic help', title: '단축키·사용법', text: '?', onclick: () => this.openHelp() });
       const full = h('button', { class: 'tbtn ic', title: '전체 화면', html: ICON.full, onclick: () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); } });
       const sep = () => h('div', { class: 'tsep' });
-      T0.append(logo, sep(), this.tb.sym, sep(), ivBox, sep(), this.tb.type, ind, sep(), lay, this.tb.undo, this.tb.redo, sep(), rep, alert, sp, help, shot, theme, set, full);
+      T0.append(logo, sep(), this.tb.sym, sep(), ivBox, sep(), this.tb.type, ind, sep(), lay, this.tb.undo, this.tb.redo, sep(), rep, alert, sp, help, shot, theme, set, full, sep(), this.tb.panelBox);
     }
     refreshTop() {
       if (this.m) this.m.refreshChart();
@@ -506,7 +510,7 @@
       const grid = h('div', { class: 'pal-grid' });
       let cur = color, a = alpha;
       for (const c of U.PALETTE) grid.append(h('button', { class: 'pal-sw' + (c.toLowerCase() === String(color).toLowerCase() ? ' on' : ''), style: { background: c }, title: c, onclick: (ev) => { cur = c; cb(cur, a); const me = ev.currentTarget; U.$$('.pal-sw', grid).forEach((x) => x.classList.toggle('on', x === me)); } }));
-      const custom = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(color) ? color : '#2962ff', oninput: (e) => { cur = e.target.value; cb(cur, a); } });
+      const custom = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(color) ? color : '#0a84ff', oninput: (e) => { cur = e.target.value; cb(cur, a); } });
       box.append(grid, h('div', { class: 'pal-row' }, h('span', { text: '사용자 색' }), custom));
       if (alpha != null) {
         const lab = h('span', { class: 'pal-a', text: Math.round(alpha * 100) + '%' });
@@ -811,7 +815,7 @@
                   this.swatch(() => l.c, (v) => { l.c = v; upd(); }),
                   h('button', { class: 'mini', html: ICON.close, title: '삭제', onclick: () => { s.levels.splice(i, 1); renderLv(); upd(); } })));
               });
-              box.append(h('button', { class: 'btn small', text: '+ 레벨 추가', onclick: () => { s.levels.push({ v: 1.5, c: '#2962ff', on: true }); renderLv(); upd(); } }));
+              box.append(h('button', { class: 'btn small', text: '+ 레벨 추가', onclick: () => { s.levels.push({ v: 1.5, c: '#0a84ff', on: true }); renderLv(); upd(); } }));
             };
             renderLv();
             body.append(box);
@@ -821,7 +825,7 @@
             let el;
             if (f.t === 'bool') el = h('input', { type: 'checkbox', checked: !!s[f.k], onchange: (e) => { s[f.k] = e.target.checked; upd(); } });
             else if (f.t === 'sel') el = h('select', { onchange: (e) => { const v = e.target.value; s[f.k] = isNaN(+v) || v === '' ? v : +v; upd(); } }, ...f.o.map(([v, n]) => h('option', { value: v, text: n, selected: String(s[f.k]) === String(v) })));
-            else if (f.t === 'color') el = this.swatch(() => s[f.k] || '#2962ff', (v) => { s[f.k] = v; upd(); });
+            else if (f.t === 'color') el = this.swatch(() => s[f.k] || '#0a84ff', (v) => { s[f.k] = v; upd(); });
             else if (f.t === 'str') el = h('input', { type: 'text', value: s[f.k] || '', oninput: (e) => { s[f.k] = e.target.value; upd(); } });
             else el = h('input', { type: 'number', step: f.step || 'any', value: s[f.k], oninput: (e) => { const v = parseFloat(e.target.value); if (isFinite(v)) { s[f.k] = v; upd(); } } });
             body.append(row(f.n, el));
@@ -912,7 +916,7 @@
       const chk = (k, n) => h('label', { class: 'f-row' }, h('span', { class: 'f-l', text: n }), h('input', { type: 'checkbox', checked: !!s[k], onchange: (e) => { s[k] = e.target.checked; redraw(); } }));
       body.append(h('div', { class: 'f-sec', text: '모양' }));
       body.append(h('label', { class: 'f-row' }, h('span', { class: 'f-l', text: '테마' }), h('select', { onchange: (e) => { s.theme = e.target.value; this.saveSet(); this.applyTheme(); } },
-        h('option', { value: 'dark', text: '블랙 (트레이딩뷰 다크)', selected: s.theme === 'dark' }), h('option', { value: 'navy', text: '네이비 (구 트레이딩뷰 다크)', selected: s.theme === 'navy' }), h('option', { value: 'light', text: '라이트', selected: s.theme === 'light' }))));
+        h('option', { value: 'dark', text: '다크', selected: s.theme === 'dark' }), h('option', { value: 'navy', text: '미드나이트', selected: s.theme === 'navy' }), h('option', { value: 'light', text: '라이트', selected: s.theme === 'light' }))));
       body.append(h('label', { class: 'f-row' }, h('span', { class: 'f-l', text: '화면' }), h('select', { onchange: (e) => { U.save('ui', e.target.value); location.replace(location.pathname); } },
         ...[['auto', '자동 (폰은 모바일 화면)'], ['mobile', '모바일 화면'], ['desktop', 'PC 화면']].map(([v, n]) => h('option', { value: v, text: n, selected: U.load('ui', 'auto') === v })))));
       const bgSw = this.swatch(() => s.bgColor || (CL.THEMES[s.theme] || CL.THEMES.dark).bg, (v) => { s.bgColor = v; redraw(); });
@@ -1123,9 +1127,9 @@
       this.notify(CL.BRAND.name + ' 추세선 알림', '📈 ' + (c.dispName() || c.sym) + ' ' + U.IV_LABEL[c.iv] + ' — ' + text);
     }
 
-    /* ================= 오른쪽 패널 (트레이딩뷰처럼 맨 오른쪽 아이콘 바 + 크기 조절 패널) ================= */
+    /* ================= 오른쪽 사이드바 (위 막대 오른쪽 끝 버튼으로 열고 닫음 + 크기 조절) ================= */
     buildRight() {
-      const P = this.el.panel, B = this.el.rbar;
+      const P = this.el.panel, B = (this.tb && this.tb.panelBox) || this.el.rbar;
       P.innerHTML = ''; B.innerHTML = '';
       this.rp = { btn: {} };
       for (const [k, n, ic] of [['watch', '관심종목', ICON.list], ['alerts', '알림', ICON.bell], ['tree', '객체 트리', ICON.tree]]) {

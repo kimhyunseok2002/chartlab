@@ -100,10 +100,10 @@
   CL.F = F;
 
   /* 기본 스타일 */
-  const D = (o) => Object.assign({ c: '#2962ff', w: 2, ls: 0, text: '', tc: null, fs: 13, bold: false, italic: false }, o);
-  const FIB_COLORS = { 0: '#787b86', 0.236: '#f23645', 0.382: '#ff9800', 0.5: '#4caf50', 0.618: '#089981', 0.786: '#00bcd4', 1: '#787b86', 1.272: '#81c784', 1.414: '#f23645', 1.618: '#2962ff', 2: '#9c27b0', 2.618: '#f23645', 3.618: '#9c27b0', 4.236: '#e91e63' };
-  const fibL = (vals, off) => vals.map((v) => ({ v, c: FIB_COLORS[v] || '#787b86', on: !(off || []).includes(v) }));
-  const FORK_L = L([[0.25, '#ffb74d', false], [0.382, '#81c784', false], [0.5, '#4caf50'], [0.618, '#009688', false], [0.75, '#64b5f6', false], [1, '#2962ff'], [1.5, '#9575cd', false], [1.75, '#ba68c8', false], [2, '#e91e63', false]]);
+  const D = (o) => Object.assign({ c: '#0a84ff', w: 2, ls: 0, text: '', tc: null, fs: 13, bold: false, italic: false }, o);
+  const FIB_COLORS = { 0: '#8e8e93', 0.236: '#ff453a', 0.382: '#ff9f0a', 0.5: '#34c759', 0.618: '#30d158', 0.786: '#40c8e0', 1: '#8e8e93', 1.272: '#89e89c', 1.414: '#ff453a', 1.618: '#0a84ff', 2: '#bf5af2', 2.618: '#ff453a', 3.618: '#bf5af2', 4.236: '#ff375f' };
+  const fibL = (vals, off) => vals.map((v) => ({ v, c: FIB_COLORS[v] || '#8e8e93', on: !(off || []).includes(v) }));
+  const FORK_L = L([[0.25, '#ffc266', false], [0.382, '#89e89c', false], [0.5, '#34c759'], [0.618, '#00c7be', false], [0.75, '#70b8ff', false], [1, '#0a84ff'], [1.5, '#7d7aff', false], [1.75, '#da8fff', false], [2, '#ff375f', false]]);
 
   /* ===================== 선 ===================== */
   T.trendline = {
@@ -194,7 +194,7 @@
     draw(g, d, P) { g.hline(P[0].y, lst(d)); g.vline(P[0].x, lst(d)); g.ptag(d.pts[0].p, d.s.c); g.ttag(d.pts[0].t, d.s.c); },
   };
   T.channel = {
-    name: '평행 채널', n: 3, defaults: D({ w: 1, fill: true, fc: '#2962ff', fa: 0.12, mid: true, extL: false, extR: false }),
+    name: '평행 채널', n: 3, defaults: D({ w: 1, fill: true, fc: '#0a84ff', fa: 0.12, mid: true, extL: false, extR: false }),
     ui: [F.line, F.fill, F.ext, F.bool('mid', '가운데 선')],
     draw(g, d, P) {
       if (P.length < 2) return;
@@ -210,7 +210,7 @@
     },
   };
   T.regression = {
-    name: '회귀 추세', n: 2, mainOnly: true, defaults: D({ w: 1, c: '#2962ff', c2: '#f23645', dev: 2, fill: true, fc: '#2962ff', fa: 0.08, extR: false, src: 'close' }),
+    name: '회귀 추세', n: 2, mainOnly: true, defaults: D({ w: 1, c: '#0a84ff', c2: '#ff453a', dev: 2, fill: true, fc: '#0a84ff', fa: 0.08, extR: false, src: 'close' }),
     ui: [F.line, F.color('c2', '중앙선 색'), F.num('dev', '표준편차 배수', { step: 0.1 }), F.fill, F.bool('extR', '오른쪽 연장'), F.sel('src', '소스', [['close', '종가'], ['hl2', '(고+저)/2'], ['hlc3', '(고+저+종)/3']])],
     calc(d, C) {
       const b = C.bars, n = b.length;
@@ -248,7 +248,7 @@
     },
   };
   T.flattop = {
-    name: '평평한 상단/하단', n: 3, defaults: D({ w: 1, fill: true, fc: '#2962ff', fa: 0.12, extL: false, extR: false }), ui: [F.line, F.fill, F.ext],
+    name: '평평한 상단/하단', n: 3, defaults: D({ w: 1, fill: true, fc: '#0a84ff', fa: 0.12, extL: false, extR: false }), ui: [F.line, F.fill, F.ext],
     draw(g, d, P) {
       if (P.length < 2) return;
       const [a, b] = P;
@@ -262,7 +262,7 @@
     onHandle(d, k, pt) { if (k === 2) d.pts[2] = { t: d.pts[2].t, p: pt.p }; else d.pts[k] = pt; },
   };
   T.disjoint = {
-    name: '분리 채널', n: 3, defaults: D({ w: 1, fill: true, fc: '#2962ff', fa: 0.12 }), ui: [F.line, F.fill],
+    name: '분리 채널', n: 3, defaults: D({ w: 1, fill: true, fc: '#0a84ff', fa: 0.12 }), ui: [F.line, F.fill],
     draw(g, d, P) {
       if (P.length < 2) return;
       const [a, b] = P;
@@ -306,7 +306,7 @@
       if (O !== p1) g.line(p1.x, p1.y, O.x, O.y, lst(d, { ls: 1, w: 1 }));
     };
   }
-  const forkBase = { n: 3, defaults: D({ c: '#f23645', w: 1, fill: true, fa: 0.1, levels: FORK_L }), ui: [F.line, F.fill, F.levels] };
+  const forkBase = { n: 3, defaults: D({ c: '#ff453a', w: 1, fill: true, fa: 0.1, levels: FORK_L }), ui: [F.line, F.fill, F.levels] };
   T.pitchfork = Object.assign({}, forkBase, { name: '앤드류 피치포크', draw: forkDraw('andrews') });
   T.schiff = Object.assign({}, forkBase, { name: '쉬프 피치포크', draw: forkDraw('schiff') });
   T.modschiff = Object.assign({}, forkBase, { name: '수정 쉬프 피치포크', draw: forkDraw('mod') });
@@ -315,7 +315,7 @@
   const fibUI = [F.line, F.ext, F.levels, F.fill].concat(F.lbl, [F.sel('lpos', '라벨 위치', [['left', '왼쪽'], ['right', '오른쪽']]), F.bool('rev', '반전'), F.bool('trend', '추세선 표시')]);
   T.fibret = {
     name: '피보나치 되돌림', n: 2, key: 'Alt+F',
-    defaults: D({ c: '#787b86', w: 1, fill: true, fa: 0.1, labels: true, prices: true, lpos: 'left', rev: false, trend: true, extL: false, extR: false, levels: fibL([0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618, 3.618, 4.236], [3.618, 4.236]) }),
+    defaults: D({ c: '#8e8e93', w: 1, fill: true, fa: 0.1, labels: true, prices: true, lpos: 'left', rev: false, trend: true, extL: false, extR: false, levels: fibL([0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618, 3.618, 4.236], [3.618, 4.236]) }),
     ui: fibUI,
     draw(g, d, P, C) {
       if (P.length < 2) return;
@@ -337,7 +337,7 @@
   };
   T.fibext = {
     name: '추세 기반 피보나치 확장', n: 3,
-    defaults: D({ c: '#787b86', w: 1, fill: true, fa: 0.1, labels: true, prices: true, lpos: 'left', trend: true, extL: false, extR: false, levels: fibL([0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.272, 1.414, 1.618, 2, 2.618, 3.618, 4.236], [1.272, 1.414, 2, 3.618, 4.236]) }),
+    defaults: D({ c: '#8e8e93', w: 1, fill: true, fa: 0.1, labels: true, prices: true, lpos: 'left', trend: true, extL: false, extR: false, levels: fibL([0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.272, 1.414, 1.618, 2, 2.618, 3.618, 4.236], [1.272, 1.414, 2, 3.618, 4.236]) }),
     ui: [F.line, F.ext, F.levels, F.fill].concat(F.lbl, [F.sel('lpos', '라벨 위치', [['left', '왼쪽'], ['right', '오른쪽']]), F.bool('trend', '추세선 표시')]),
     draw(g, d, P, C) {
       if (P.length < 2) return;
@@ -355,7 +355,7 @@
   };
   T.fibchannel = {
     name: '피보나치 채널', n: 3,
-    defaults: D({ c: '#787b86', w: 1, fill: true, fa: 0.1, labels: true, extL: false, extR: false, levels: fibL([0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618, 3.618, 4.236], [3.618, 4.236]) }),
+    defaults: D({ c: '#8e8e93', w: 1, fill: true, fa: 0.1, labels: true, extL: false, extR: false, levels: fibL([0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618, 3.618, 4.236], [3.618, 4.236]) }),
     ui: [F.line, F.ext, F.levels, F.fill, F.bool('labels', '레벨 라벨')],
     draw(g, d, P) {
       if (P.length < 2) return;
@@ -378,7 +378,7 @@
   };
   T.fibtime = {
     name: '피보나치 시간대', n: 2, noPriceAxis: true,
-    defaults: D({ w: 1, labels: true, levels: [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233].map((v, i) => ({ v, c: ['#787b86', '#2962ff', '#2962ff', '#4caf50', '#4caf50', '#089981', '#ff9800', '#f23645', '#9c27b0', '#2962ff', '#4caf50', '#ff9800', '#f23645'][i], on: true })) }),
+    defaults: D({ w: 1, labels: true, levels: [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233].map((v, i) => ({ v, c: ['#8e8e93', '#0a84ff', '#0a84ff', '#34c759', '#34c759', '#30d158', '#ff9f0a', '#ff453a', '#bf5af2', '#0a84ff', '#34c759', '#ff9f0a', '#ff453a'][i], on: true })) }),
     ui: [F.line, F.levels, F.bool('labels', '레벨 라벨')],
     draw(g, d, P, C) {
       if (P.length < 2) return;
@@ -396,7 +396,7 @@
   };
   T.fibfan = {
     name: '피보나치 속도저항 팬', n: 2,
-    defaults: D({ c: '#787b86', w: 1, fill: true, fa: 0.06, labels: true, grid: true, levels: fibL([0, 0.25, 0.382, 0.5, 0.618, 0.75, 1]).map((l) => Object.assign(l, { c: { 0: '#787b86', 0.25: '#f23645', 0.382: '#ff9800', 0.5: '#4caf50', 0.618: '#089981', 0.75: '#2962ff', 1: '#787b86' }[l.v] })) }),
+    defaults: D({ c: '#8e8e93', w: 1, fill: true, fa: 0.06, labels: true, grid: true, levels: fibL([0, 0.25, 0.382, 0.5, 0.618, 0.75, 1]).map((l) => Object.assign(l, { c: { 0: '#8e8e93', 0.25: '#ff453a', 0.382: '#ff9f0a', 0.5: '#34c759', 0.618: '#30d158', 0.75: '#0a84ff', 1: '#8e8e93' }[l.v] })) }),
     ui: [F.line, F.levels, F.fill, F.bool('labels', '레벨 라벨'), F.bool('grid', '격자')],
     draw(g, d, P) {
       if (P.length < 2) return;
@@ -422,7 +422,7 @@
   };
   T.fibtrendtime = {
     name: '추세 기반 피보나치 시간', n: 3, noPriceAxis: true,
-    defaults: D({ c: '#787b86', w: 1, labels: true, levels: fibL([0, 0.382, 0.5, 0.618, 1, 1.382, 1.618, 2, 2.382, 2.618, 3, 3.618, 4.236], [2.382, 3, 3.618, 4.236]).map((l, i) => Object.assign(l, { c: ['#787b86', '#f23645', '#ff9800', '#4caf50', '#089981', '#00bcd4', '#2962ff', '#9c27b0', '#e91e63', '#f23645', '#ff9800', '#4caf50', '#2962ff'][i] })) }),
+    defaults: D({ c: '#8e8e93', w: 1, labels: true, levels: fibL([0, 0.382, 0.5, 0.618, 1, 1.382, 1.618, 2, 2.382, 2.618, 3, 3.618, 4.236], [2.382, 3, 3.618, 4.236]).map((l, i) => Object.assign(l, { c: ['#8e8e93', '#ff453a', '#ff9f0a', '#34c759', '#30d158', '#40c8e0', '#0a84ff', '#bf5af2', '#ff375f', '#ff453a', '#ff9f0a', '#34c759', '#0a84ff'][i] })) }),
     ui: [F.line, F.levels, F.bool('labels', '레벨 라벨')],
     draw(g, d, P, C) {
       if (P.length < 2) return;
@@ -440,7 +440,7 @@
   };
   const ringL = fibL([0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618, 3.618, 4.236], [3.618, 4.236]);
   T.fibcircles = {
-    name: '피보나치 원', n: 2, defaults: D({ c: '#787b86', w: 1, fill: true, fa: 0.08, labels: true, levels: ringL }),
+    name: '피보나치 원', n: 2, defaults: D({ c: '#8e8e93', w: 1, fill: true, fa: 0.08, labels: true, levels: ringL }),
     ui: [F.line, F.levels, F.fill, F.bool('labels', '레벨 라벨')],
     draw(g, d, P) {
       if (P.length < 2) return;
@@ -452,7 +452,7 @@
     },
   };
   T.fibspiral = {
-    name: '피보나치 나선', n: 2, defaults: D({ c: '#f23645', w: 1.5, ccw: false }), ui: [F.line, F.bool('ccw', '반시계 방향')],
+    name: '피보나치 나선', n: 2, defaults: D({ c: '#ff453a', w: 1.5, ccw: false }), ui: [F.line, F.bool('ccw', '반시계 방향')],
     draw(g, d, P) {
       if (P.length < 2) return;
       const [a, b] = P, rb = len(sub(b, a));
@@ -471,7 +471,7 @@
     },
   };
   T.fibarcs = {
-    name: '피보나치 속도저항 호', n: 2, defaults: D({ c: '#787b86', w: 1, fill: true, fa: 0.08, full: false, labels: true, levels: fibL([0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618], [1.618, 2.618]) }),
+    name: '피보나치 속도저항 호', n: 2, defaults: D({ c: '#8e8e93', w: 1, fill: true, fa: 0.08, full: false, labels: true, levels: fibL([0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618], [1.618, 2.618]) }),
     ui: [F.line, F.levels, F.fill, F.bool('full', '전체 원'), F.bool('labels', '레벨 라벨')],
     draw(g, d, P) {
       if (P.length < 2) return;
@@ -488,7 +488,7 @@
     },
   };
   T.fibwedge = {
-    name: '피보나치 쐐기', n: 3, defaults: D({ c: '#787b86', w: 1, fill: true, fa: 0.1, labels: true, levels: fibL([0.236, 0.382, 0.5, 0.618, 0.786, 1]) }),
+    name: '피보나치 쐐기', n: 3, defaults: D({ c: '#8e8e93', w: 1, fill: true, fa: 0.1, labels: true, levels: fibL([0.236, 0.382, 0.5, 0.618, 0.786, 1]) }),
     ui: [F.line, F.levels, F.fill, F.bool('labels', '레벨 라벨')],
     draw(g, d, P) {
       if (P.length < 2) return;
@@ -512,7 +512,7 @@
     },
   };
   T.pitchfan = {
-    name: '피치팬', n: 3, defaults: D({ c: '#f23645', w: 1, fill: true, fa: 0.1, levels: FORK_L }), ui: [F.line, F.fill, F.levels],
+    name: '피치팬', n: 3, defaults: D({ c: '#ff453a', w: 1, fill: true, fa: 0.1, levels: FORK_L }), ui: [F.line, F.fill, F.levels],
     draw(g, d, P) {
       if (P.length < 2) return;
       const [o, p2] = P;
@@ -536,9 +536,9 @@
   };
 
   /* ===================== 간(Gann) ===================== */
-  const GANN_L = L([[0, '#787b86'], [0.25, '#ff9800'], [0.382, '#4caf50'], [0.5, '#089981'], [0.618, '#00bcd4'], [0.75, '#2962ff'], [1, '#787b86']]);
+  const GANN_L = L([[0, '#8e8e93'], [0.25, '#ff9f0a'], [0.382, '#34c759'], [0.5, '#30d158'], [0.618, '#40c8e0'], [0.75, '#0a84ff'], [1, '#8e8e93']]);
   T.gannbox = {
-    name: '간 박스', n: 2, defaults: D({ c: '#787b86', w: 1, fill: true, fa: 0.08, labels: true, diag: true, levels: GANN_L }),
+    name: '간 박스', n: 2, defaults: D({ c: '#8e8e93', w: 1, fill: true, fa: 0.08, labels: true, diag: true, levels: GANN_L }),
     ui: [F.line, F.levels, F.fill, F.bool('labels', '레벨 라벨'), F.bool('diag', '대각선')],
     draw(g, d, P) {
       if (P.length < 2) return;
@@ -561,7 +561,7 @@
     },
   };
   T.gannsquare = {
-    name: '간 스퀘어', n: 2, defaults: D({ c: '#787b86', w: 1, fill: true, fa: 0.06, levels: L([[0, '#787b86'], [0.25, '#ff9800'], [0.5, '#4caf50'], [0.75, '#2962ff'], [1, '#787b86']]) }),
+    name: '간 스퀘어', n: 2, defaults: D({ c: '#8e8e93', w: 1, fill: true, fa: 0.06, levels: L([[0, '#8e8e93'], [0.25, '#ff9f0a'], [0.5, '#34c759'], [0.75, '#0a84ff'], [1, '#8e8e93']]) }),
     ui: [F.line, F.levels, F.fill],
     draw(g, d, P) {
       if (P.length < 2) return;
@@ -584,7 +584,7 @@
   };
   const GFAN = [[8, 1], [4, 1], [3, 1], [2, 1], [1, 1], [1, 2], [1, 3], [1, 4], [1, 8]];
   T.gannfan = {
-    name: '간 팬', n: 2, defaults: D({ c: '#787b86', w: 1, fill: true, fa: 0.06, labels: true, levels: GFAN.map((r, i) => ({ v: i, c: ['#f23645', '#ff9800', '#ffeb3b', '#4caf50', '#089981', '#00bcd4', '#2962ff', '#673ab7', '#e91e63'][i], on: true })) }),
+    name: '간 팬', n: 2, defaults: D({ c: '#8e8e93', w: 1, fill: true, fa: 0.06, labels: true, levels: GFAN.map((r, i) => ({ v: i, c: ['#ff453a', '#ff9f0a', '#ffd60a', '#34c759', '#30d158', '#40c8e0', '#0a84ff', '#5e5ce6', '#ff375f'][i], on: true })) }),
     ui: [F.line, F.fill, F.bool('labels', '각도 라벨')],
     draw(g, d, P) {
       if (P.length < 2) return;
@@ -599,7 +599,7 @@
   };
 
   /* ===================== 패턴 ===================== */
-  const patD = D({ c: '#2962ff', w: 2, fill: true, fc: '#2962ff', fa: 0.15 });
+  const patD = D({ c: '#0a84ff', w: 2, fill: true, fc: '#0a84ff', fa: 0.15 });
   const patUI = [F.line, F.fill];
   const pv = (d, i) => (d.pts[i] ? d.pts[i].p : NaN);
   T.xabcd = {
@@ -634,7 +634,7 @@
     },
   };
   T.abcd = {
-    name: 'ABCD 패턴', n: 4, defaults: D({ c: '#089981', w: 2 }), ui: [F.line],
+    name: 'ABCD 패턴', n: 4, defaults: D({ c: '#30d158', w: 2 }), ui: [F.line],
     draw(g, d, P) {
       g.poly(P, lst(d));
       if (P.length >= 3) ratioLine(g, P[0], P[2], rt(pv(d, 0), pv(d, 1), pv(d, 1), pv(d, 2)), d);
@@ -643,7 +643,7 @@
     },
   };
   T.trianglepat = {
-    name: '삼각형 패턴', n: 4, defaults: D({ c: '#9c27b0', w: 2, fill: true, fc: '#9c27b0', fa: 0.12 }), ui: patUI,
+    name: '삼각형 패턴', n: 4, defaults: D({ c: '#bf5af2', w: 2, fill: true, fc: '#bf5af2', fa: 0.12 }), ui: patUI,
     draw(g, d, P) {
       g.poly(P, lst(d));
       if (P.length >= 4) {
@@ -657,7 +657,7 @@
     },
   };
   T.threedrives = {
-    name: '쓰리 드라이브 패턴', n: 6, defaults: D({ c: '#ff9800', w: 2 }), ui: [F.line],
+    name: '쓰리 드라이브 패턴', n: 6, defaults: D({ c: '#ff9f0a', w: 2 }), ui: [F.line],
     draw(g, d, P) {
       g.poly(P, lst(d));
       for (let i = 2; i < P.length; i++) {
@@ -678,7 +678,7 @@
   const eUI = [F.line, F.sel('deg', '파동 등급(라벨)', [[0, '(1) (A)'], [1, '1 A'], [2, '[1] [A]'], [3, 'i a'], [4, '(i) (a)']])];
   function elliott(name, labels) {
     return {
-      name, n: labels.length + 1, defaults: D({ c: '#3179f5', w: 1.5, deg: 0 }), ui: eUI,
+      name, n: labels.length + 1, defaults: D({ c: '#0a84ff', w: 1.5, deg: 0 }), ui: eUI,
       draw(g, d, P) {
         g.poly(P, lst(d));
         labels.forEach((s, i) => { const k = i + 1; if (!P[k]) return; const up = isPeak(P, k); g.text(eLabel(s, d.s.deg), P[k].x, P[k].y + (up ? -6 : 6), { align: 'center', base: up ? 'bottom' : 'top', c: d.s.c, size: 13, bold: true, hit: false }); });
@@ -693,7 +693,7 @@
 
   /* ===================== 사이클 ===================== */
   T.cyclic = {
-    name: '사이클 라인', n: 2, noPriceAxis: true, defaults: D({ w: 1, c: '#2962ff' }), ui: [F.line],
+    name: '사이클 라인', n: 2, noPriceAxis: true, defaults: D({ w: 1, c: '#0a84ff' }), ui: [F.line],
     draw(g, d, P, C) {
       if (P.length < 2) return;
       const i0 = C.t2i(d.pts[0].t), di = Math.abs(C.t2i(d.pts[1].t) - i0);
@@ -703,7 +703,7 @@
     },
   };
   T.timecycles = {
-    name: '타임 사이클', n: 2, defaults: D({ w: 1, c: '#9c27b0', fill: true, fc: '#9c27b0', fa: 0.08 }), ui: [F.line, F.fill],
+    name: '타임 사이클', n: 2, defaults: D({ w: 1, c: '#bf5af2', fill: true, fc: '#bf5af2', fa: 0.08 }), ui: [F.line, F.fill],
     draw(g, d, P, C) {
       if (P.length < 2) return;
       const [a, b] = P, D0 = Math.abs(b.x - a.x);
@@ -719,7 +719,7 @@
     onHandle(d, k, pt) { if (k === 1) d.pts[1] = { t: pt.t, p: d.pts[0].p }; else { d.pts[0] = pt; } },
   };
   T.sine = {
-    name: '사인 라인', n: 2, defaults: D({ w: 1.5, c: '#00bcd4' }), ui: [F.line],
+    name: '사인 라인', n: 2, defaults: D({ w: 1.5, c: '#40c8e0' }), ui: [F.line],
     draw(g, d, P, C) {
       if (P.length < 2) return;
       const [a, b] = P, hp = b.x - a.x;
@@ -734,7 +734,7 @@
   function position(isLong) {
     return {
       name: isLong ? '롱 포지션' : '숏 포지션', n: 1, mainOnly: true, noAxis: false,
-      defaults: { c: '#787b86', w: 1, ls: 0, acct: 1000, risk: 1, lev: 1, qtyDec: 4, tc: '#ffffff', fs: 12, showRes: true },
+      defaults: { c: '#8e8e93', w: 1, ls: 0, acct: 1000, risk: 1, lev: 1, qtyDec: 4, tc: '#ffffff', fs: 12, showRes: true },
       ui: [F.num('acct', '계좌 규모'), F.num('risk', '리스크(%)', { step: 0.1 }), F.num('lev', '레버리지', { step: 1 }), F.num('qtyDec', '수량 소수점', { step: 1 }), F.bool('showRes', '결과(도달 여부) 표시')],
       init(d, C) {
         const e = d.pts[0], r = Math.max(C.hi - C.lo, Math.abs(e.p) * 0.01), up = isLong ? 1 : -1;
@@ -751,9 +751,9 @@
         const [E, Tg, St] = P;
         const e = d.pts[0].p, tp = d.pts[1].p, sp = d.pts[2].p;
         const xl = Math.min(E.x, Tg.x), xr = Math.max(E.x, Tg.x), w = Math.max(2, xr - xl);
-        g.rect(xl, Math.min(E.y, Tg.y), w, Math.abs(Tg.y - E.y), { fill: 'rgba(8,153,129,0.22)', noStroke: true });
-        g.rect(xl, Math.min(E.y, St.y), w, Math.abs(St.y - E.y), { fill: 'rgba(242,54,69,0.22)', noStroke: true });
-        g.line(xl, E.y, xr, E.y, { c: '#787b86', w: 1 });
+        g.rect(xl, Math.min(E.y, Tg.y), w, Math.abs(Tg.y - E.y), { fill: 'rgba(48, 209, 88,0.22)', noStroke: true });
+        g.rect(xl, Math.min(E.y, St.y), w, Math.abs(St.y - E.y), { fill: 'rgba(255, 69, 58,0.22)', noStroke: true });
+        g.line(xl, E.y, xr, E.y, { c: '#8e8e93', w: 1 });
         const s = isLong ? 1 : -1;
         const tPct = ((tp - e) / e) * 100 * s, sPct = ((e - sp) / e) * 100 * s;
         const rr = Math.abs(e - sp) > 0 ? Math.abs(tp - e) / Math.abs(e - sp) : 0;
@@ -762,8 +762,8 @@
         const prof = qty * Math.abs(tp - e);
         const cx = xl + w / 2;
         const tAbove = isLong ? Tg.y < E.y : Tg.y < E.y;
-        g.text('목표: ' + C.fp(tp) + ' (' + U.fmtPct(tPct) + ')  +' + U.fmt(prof, 2), cx, Tg.y + (tAbove ? -4 : 4), { align: 'center', base: tAbove ? 'bottom' : 'top', c: '#fff', bg: '#089981', size: d.s.fs, pad: 4, hit: false });
-        g.text('손절: ' + C.fp(sp) + ' (-' + Math.abs(sPct).toFixed(2) + '%)  -' + U.fmt(riskAmt, 2), cx, St.y + (St.y > E.y ? 4 : -4), { align: 'center', base: St.y > E.y ? 'top' : 'bottom', c: '#fff', bg: '#f23645', size: d.s.fs, pad: 4, hit: false });
+        g.text('목표: ' + C.fp(tp) + ' (' + U.fmtPct(tPct) + ')  +' + U.fmt(prof, 2), cx, Tg.y + (tAbove ? -4 : 4), { align: 'center', base: tAbove ? 'bottom' : 'top', c: '#fff', bg: '#30d158', size: d.s.fs, pad: 4, hit: false });
+        g.text('손절: ' + C.fp(sp) + ' (-' + Math.abs(sPct).toFixed(2) + '%)  -' + U.fmt(riskAmt, 2), cx, St.y + (St.y > E.y ? 4 : -4), { align: 'center', base: St.y > E.y ? 'top' : 'bottom', c: '#fff', bg: '#ff453a', size: d.s.fs, pad: 4, hit: false });
         let res = '';
         if (d.s.showRes) {
           const b = C.bars, i0 = Math.max(0, Math.ceil(C.t2i(d.pts[0].t))), i1 = Math.min(b.length - 1, Math.floor(C.t2i(d.pts[1].t)));
@@ -776,8 +776,8 @@
           }
           if (hit) {
             const hx = C.x(hit.i), hy = C.y(hit.p);
-            g.rect(xl, Math.min(E.y, hy), hx - xl, Math.abs(hy - E.y), { fill: hit.win ? 'rgba(8,153,129,0.25)' : 'rgba(242,54,69,0.25)', noStroke: true, hit: false });
-            g.line(E.x, E.y, hx, hy, { c: hit.win ? '#089981' : '#f23645', w: 1, ls: 1, hit: false });
+            g.rect(xl, Math.min(E.y, hy), hx - xl, Math.abs(hy - E.y), { fill: hit.win ? 'rgba(48, 209, 88,0.25)' : 'rgba(255, 69, 58,0.25)', noStroke: true, hit: false });
+            g.line(E.x, E.y, hx, hy, { c: hit.win ? '#30d158' : '#ff453a', w: 1, ls: 1, hit: false });
             res = hit.win ? '  ✔ 목표 도달' : '  ✘ 손절';
           } else if (i1 >= i0 && i1 === b.length - 1 && b.length) {
             const pl = ((b[b.length - 1].c - e) / e) * 100 * s;
@@ -793,7 +793,7 @@
   T.longpos = position(true);
   T.shortpos = position(false);
   T.forecast = {
-    name: '예측', n: 2, mainOnly: true, defaults: D({ c: '#2962ff', w: 1.5 }), ui: [F.line],
+    name: '예측', n: 2, mainOnly: true, defaults: D({ c: '#0a84ff', w: 1.5 }), ui: [F.line],
     finish(d, C) { const i = U.clamp(Math.round(C.t2i(d.pts[0].t)), 0, C.bars.length - 1); if (C.bars[i]) d.pts[0].p = C.bars[i].c; },
     draw(g, d, P, C) {
       if (P.length < 2) return;
@@ -802,7 +802,7 @@
       g.circle(a.x, a.y, 4, { c: d.s.c, w: 1.5, fill: C.th.bg });
       g.circle(b.x, b.y, 5, { c: d.s.c, w: 1.5, fill: U.rgba(d.s.c, 0.3) });
       const up = d.pts[1].p >= d.pts[0].p;
-      g.text(statsText(d, C), b.x + 10, b.y, { base: 'middle', c: '#fff', bg: up ? 'rgba(8,153,129,0.9)' : 'rgba(242,54,69,0.9)', size: 11, pad: 5 });
+      g.text(statsText(d, C), b.x + 10, b.y, { base: 'middle', c: '#fff', bg: up ? 'rgba(48, 209, 88,0.9)' : 'rgba(255, 69, 58,0.9)', size: 11, pad: 5 });
     },
   };
   function rangeDraw(kind, colorFn) {
@@ -827,12 +827,12 @@
       g.text(lines.join('\n'), mx, (below ? Math.max(a.y, b.y) : Math.min(a.y, b.y)) + (below ? 6 : -6), { align: 'center', tAlign: 'center', base: below ? 'top' : 'bottom', c: '#fff', bg: U.rgba(col, 0.92), size: 12, pad: 6, hit: false });
     };
   }
-  T.daterange = { name: '기간 범위', n: 2, defaults: D({ c: '#2962ff', w: 1 }), ui: [F.line], draw: rangeDraw('date') };
-  T.pricerange = { name: '가격 범위', n: 2, defaults: D({ c: '#2962ff', w: 1 }), ui: [F.line], draw: rangeDraw('price') };
-  T.dprange = { name: '기간·가격 범위', n: 2, defaults: D({ c: '#2962ff', w: 1 }), ui: [F.line], draw: rangeDraw('both') };
-  T.measure = { name: '측정', n: 2, hidden: true, defaults: {}, ui: [], draw: rangeDraw('both', (d) => (d.pts[1].p >= d.pts[0].p ? '#2962ff' : '#f23645')) };
+  T.daterange = { name: '기간 범위', n: 2, defaults: D({ c: '#0a84ff', w: 1 }), ui: [F.line], draw: rangeDraw('date') };
+  T.pricerange = { name: '가격 범위', n: 2, defaults: D({ c: '#0a84ff', w: 1 }), ui: [F.line], draw: rangeDraw('price') };
+  T.dprange = { name: '기간·가격 범위', n: 2, defaults: D({ c: '#0a84ff', w: 1 }), ui: [F.line], draw: rangeDraw('both') };
+  T.measure = { name: '측정', n: 2, hidden: true, defaults: {}, ui: [], draw: rangeDraw('both', (d) => (d.pts[1].p >= d.pts[0].p ? '#0a84ff' : '#ff453a')) };
   T.barspattern = {
-    name: '바 패턴', n: 2, mainOnly: true, defaults: D({ c: '#2962ff', w: 1, mode: 'candle', mirror: false, flip: false }),
+    name: '바 패턴', n: 2, mainOnly: true, defaults: D({ c: '#0a84ff', w: 1, mode: 'candle', mirror: false, flip: false }),
     ui: [F.color('c', '색'), F.sel('mode', '모드', [['candle', '캔들'], ['hl', 'HL 바'], ['line', '종가 선']]), F.bool('mirror', '좌우 반전'), F.bool('flip', '상하 반전')],
     finish(d, C) {
       const b = C.bars, i0 = Math.round(C.t2i(d.pts[0].t)), i1 = Math.round(C.t2i(d.pts[1].t));
@@ -873,7 +873,7 @@
     onHandle(d, k, pt) { if (k === 0) d.pts[0] = pt; else d.pts[1] = { t: pt.t, p: d.pts[0].p }; },
   };
   T.ghostfeed = {
-    name: '고스트 피드', n: 0, mainOnly: true, defaults: D({ c: '#2962ff', w: 1, vola: 1 }), ui: [F.color('c', '색'), F.num('vola', '변동성 배율', { step: 0.1 })],
+    name: '고스트 피드', n: 0, mainOnly: true, defaults: D({ c: '#0a84ff', w: 1, vola: 1 }), ui: [F.color('c', '색'), F.num('vola', '변동성 배율', { step: 0.1 })],
     draw(g, d, P, C) {
       if (P.length < 2) { if (P[0]) g.circle(P[0].x, P[0].y, 3, { c: d.s.c }); return; }
       const rnd = U.rng(d.id), ctx = g.ctx;
@@ -902,7 +902,7 @@
     },
   };
   T.avwap = {
-    name: '앵커드 VWAP', n: 1, mainOnly: true, noPriceAxis: true, defaults: D({ c: '#2962ff', w: 2, src: 'hlc3' }),
+    name: '앵커드 VWAP', n: 1, mainOnly: true, noPriceAxis: true, defaults: D({ c: '#0a84ff', w: 2, src: 'hlc3' }),
     ui: [F.line, F.sel('src', '소스', [['hlc3', '(고+저+종)/3'], ['close', '종가']])],
     draw(g, d, P, C) {
       const b = C.bars;
@@ -935,9 +935,9 @@
       const W = (xr - xl) * ((d.s.wpct || 40) / 100);
       const right = d.s.side === 'right';
       const S = {
-        up: { c: d.s.cu || '#1e88e5', a: 0.3 }, dn: { c: d.s.cd || '#fbc02d', a: 0.3 },
-        vup: { c: d.s.cu || '#1e88e5', a: 0.65 }, vdn: { c: d.s.cd || '#fbc02d', a: 0.65 },
-        poc: { c: '#ff5252', w: 1.5 }, pocExt: false,
+        up: { c: d.s.cu || '#64d2ff', a: 0.3 }, dn: { c: d.s.cd || '#ffd60a', a: 0.3 },
+        vup: { c: d.s.cu || '#64d2ff', a: 0.65 }, vdn: { c: d.s.cd || '#ffd60a', a: 0.65 },
+        poc: { c: '#ff6961', w: 1.5 }, pocExt: false,
       };
       C.c.drawVP(C.p, vp, right ? xr : xl, W, right ? -1 : 1, S, right ? xl : xr);
       d._hh = [{ x: xl, y: yt }, { x: xr, y: yb }];
@@ -946,32 +946,32 @@
   const vpUI = [F.color('c', '테두리 색'), F.num('rows', '행 개수', { step: 1 }), F.num('va', '밸류 에어리어(%)', { step: 1 }), F.num('wpct', '폭(%)', { step: 5 }), F.sel('side', '위치', [['left', '왼쪽'], ['right', '오른쪽']]), F.color('cu', '매수 색'), F.color('cd', '매도 색')];
   T.fixedvp = {
     name: '고정 범위 볼륨 프로파일', n: 2, mainOnly: true, noPriceAxis: true,
-    defaults: { c: '#2962ff', w: 1, ls: 0, rows: 24, va: 70, wpct: 40, side: 'left', cu: '#1e88e5', cd: '#fbc02d' }, ui: vpUI, draw: vpDraw(false),
+    defaults: { c: '#0a84ff', w: 1, ls: 0, rows: 24, va: 70, wpct: 40, side: 'left', cu: '#64d2ff', cd: '#ffd60a' }, ui: vpUI, draw: vpDraw(false),
     handles: (d, P) => d._hh || P,
     onHandle(d, k, pt) { d.pts[k] = { t: pt.t, p: pt.p }; },
   };
   T.anchoredvp = {
     name: '앵커드 볼륨 프로파일', n: 1, mainOnly: true, noPriceAxis: true,
-    defaults: { c: '#2962ff', w: 1, ls: 0, rows: 24, va: 70, wpct: 40, side: 'left', cu: '#1e88e5', cd: '#fbc02d' }, ui: vpUI, draw: vpDraw(true),
+    defaults: { c: '#0a84ff', w: 1, ls: 0, rows: 24, va: 70, wpct: 40, side: 'left', cu: '#64d2ff', cd: '#ffd60a' }, ui: vpUI, draw: vpDraw(true),
     handles: (d, P) => (d._hh ? [d._hh[0]] : P),
   };
 
   /* ===================== 도형 ===================== */
-  const shpD = (o) => D(Object.assign({ c: '#9c27b0', w: 2, fill: true, fc: '#9c27b0', fa: 0.15, tc: null }, o));
+  const shpD = (o) => D(Object.assign({ c: '#bf5af2', w: 2, fill: true, fc: '#bf5af2', fa: 0.15, tc: null }, o));
   const shpUI = [F.line, F.fill, F.text];
   function centerText(g, d, x, y) { if (d.s.text) g.text(d.s.text, x, y, txtSt(d, { align: 'center', tAlign: 'center', base: 'middle', hit: false })); }
   T.brush = {
-    name: '브러시', n: 2, free: true, defaults: D({ c: '#2962ff', w: 2, fill: false, fc: '#2962ff', fa: 0.15 }), ui: [F.line, F.fill],
+    name: '브러시', n: 2, free: true, defaults: D({ c: '#0a84ff', w: 2, fill: false, fc: '#0a84ff', fa: 0.15 }), ui: [F.line, F.fill],
     draw(g, d, P) { smoothPath(g, P, { c: d.s.c, w: d.s.w, ls: d.s.ls, fill: fillOf(d) }); },
     handles: () => [],
   };
   T.highlighter = {
-    name: '하이라이터', n: 2, free: true, defaults: { c: '#ffeb3b', w: 14, ls: 0, op: 0.35 }, ui: [F.color('c', '색'), F.num('w', '두께', { step: 1 }), F.num('op', '불투명도(0~1)', { step: 0.05 })],
+    name: '하이라이터', n: 2, free: true, defaults: { c: '#ffd60a', w: 14, ls: 0, op: 0.35 }, ui: [F.color('c', '색'), F.num('w', '두께', { step: 1 }), F.num('op', '불투명도(0~1)', { step: 0.05 })],
     draw(g, d, P) { smoothPath(g, P, { c: U.rgba(d.s.c, d.s.op != null ? d.s.op : 0.35), w: d.s.w }); },
     handles: () => [],
   };
   T.arrowmarker = {
-    name: '화살표 마커', n: 2, defaults: D({ c: '#2962ff', w: 1, fc: '#2962ff', tc: null }), ui: [F.color('c', '색'), F.text],
+    name: '화살표 마커', n: 2, defaults: D({ c: '#0a84ff', w: 1, fc: '#0a84ff', tc: null }), ui: [F.color('c', '색'), F.text],
     draw(g, d, P) {
       if (P.length < 2) return;
       const [a, b] = P, v = sub(b, a), L0 = len(v);
@@ -985,12 +985,12 @@
     },
   };
   T.arrow = {
-    name: '화살표', n: 2, defaults: D({ c: '#2962ff', w: 2, arrowS: false }), ui: [F.line, F.bool('arrowS', '양쪽 화살표'), F.text, F.tpos],
+    name: '화살표', n: 2, defaults: D({ c: '#0a84ff', w: 2, arrowS: false }), ui: [F.line, F.bool('arrowS', '양쪽 화살표'), F.text, F.tpos],
     draw(g, d, P) { if (P.length < 2) return; g.line(P[0].x, P[0].y, P[1].x, P[1].y, lst(d, { arrowE: true, arrowS: d.s.arrowS })); lineText(g, d, P[0], P[1]); },
   };
   function markArrow(up) {
     return {
-      name: up ? '위 화살표 표시' : '아래 화살표 표시', n: 1, defaults: D({ c: up ? '#089981' : '#f23645', tc: null, size: 18 }), ui: [F.color('c', '색'), F.num('size', '크기', { step: 1 }), F.text],
+      name: up ? '위 화살표 표시' : '아래 화살표 표시', n: 1, defaults: D({ c: up ? '#30d158' : '#ff453a', tc: null, size: 18 }), ui: [F.color('c', '색'), F.num('size', '크기', { step: 1 }), F.text],
       draw(g, d, P) {
         const { x, y } = P[0], s = d.s.size || 18, k = up ? 1 : -1;
         const pts = [{ x, y }, { x: x + s * 0.55, y: y + k * s * 0.55 }, { x: x + s * 0.2, y: y + k * s * 0.55 }, { x: x + s * 0.2, y: y + k * s }, { x: x - s * 0.2, y: y + k * s }, { x: x - s * 0.2, y: y + k * s * 0.55 }, { x: x - s * 0.55, y: y + k * s * 0.55 }];
@@ -1003,7 +1003,7 @@
   T.arrowdown = markArrow(false);
   function markArrowH(right) {
     return {
-      name: right ? '오른쪽 화살표 표시' : '왼쪽 화살표 표시', n: 1, defaults: D({ c: '#2962ff', tc: null, size: 18 }), ui: [F.color('c', '색'), F.num('size', '크기', { step: 1 }), F.text],
+      name: right ? '오른쪽 화살표 표시' : '왼쪽 화살표 표시', n: 1, defaults: D({ c: '#0a84ff', tc: null, size: 18 }), ui: [F.color('c', '색'), F.num('size', '크기', { step: 1 }), F.text],
       draw(g, d, P) {
         const { x, y } = P[0], s = d.s.size || 18, k = right ? -1 : 1;
         const pts = [{ x, y }, { x: x + k * s * 0.55, y: y - s * 0.55 }, { x: x + k * s * 0.55, y: y - s * 0.2 }, { x: x + k * s, y: y - s * 0.2 }, { x: x + k * s, y: y + s * 0.2 }, { x: x + k * s * 0.55, y: y + s * 0.2 }, { x: x + k * s * 0.55, y: y + s * 0.55 }];
@@ -1047,7 +1047,7 @@
     },
   };
   T.path = {
-    name: '경로', n: 0, defaults: D({ c: '#2962ff', w: 2, arrowE: true }), ui: [F.line, F.bool('arrowE', '끝 화살표')],
+    name: '경로', n: 0, defaults: D({ c: '#0a84ff', w: 2, arrowE: true }), ui: [F.line, F.bool('arrowE', '끝 화살표')],
     draw(g, d, P) { g.poly(P, lst(d, { arrowE: d.s.arrowE })); },
   };
   T.circle = {
@@ -1097,7 +1097,7 @@
     },
   };
   T.curve = {
-    name: '곡선', n: 3, defaults: D({ c: '#2962ff', w: 2 }), ui: [F.line],
+    name: '곡선', n: 3, defaults: D({ c: '#0a84ff', w: 2 }), ui: [F.line],
     draw(g, d, P) {
       if (P.length < 2) return;
       const [a, b] = P;
@@ -1109,7 +1109,7 @@
     },
   };
   T.dcurve = {
-    name: '이중 곡선', n: 3, defaults: D({ c: '#2962ff', w: 2 }), ui: [F.line],
+    name: '이중 곡선', n: 3, defaults: D({ c: '#0a84ff', w: 2 }), ui: [F.line],
     draw(g, d, P) {
       if (P.length < 2) return;
       const [a, b] = P;
@@ -1122,7 +1122,7 @@
   };
 
   /* ===================== 주석 ===================== */
-  const txtD = (o) => Object.assign({ c: '#2962ff', w: 1, ls: 0, text: '', tc: '#2962ff', fs: 14, bold: false, italic: false, fill: false, fc: '#2962ff', fa: 0.15, bd: false }, o);
+  const txtD = (o) => Object.assign({ c: '#0a84ff', w: 1, ls: 0, text: '', tc: '#0a84ff', fs: 14, bold: false, italic: false, fill: false, fc: '#0a84ff', fa: 0.15, bd: false }, o);
   const txtUI = [F.textOnly, F.bool('fill', '배경'), F.color('fc', '배경 색'), F.num('fa', '배경 불투명도', { step: 0.05 }), F.bool('bd', '테두리'), F.color('c', '테두리 색')];
   function plainText(g, d, P) {
     const box = g.text(d.s.text || '텍스트', P[0].x, P[0].y, txtSt(d, { c: d.s.tc, base: 'top', bg: d.s.fill ? U.rgba(d.s.fc, d.s.fa) : null, bd: d.s.bd ? d.s.c : null, pad: d.s.fill || d.s.bd ? 5 : 1 }));
@@ -1134,13 +1134,13 @@
     const { x, y } = P[0];
     g.circle(x, y, 9, { c: d.s.c, w: 1.5, fill: U.rgba(d.s.c, 0.9) });
     g.text('✎', x, y + 0.5, { align: 'center', base: 'middle', c: '#fff', size: 11, hit: false });
-    if (g.hl && d.s.text) g.text(d.s.text, x + 14, y - 10, txtSt(d, { c: '#d1d4dc', bg: 'rgba(24,24,24,0.97)', bd: d.s.c, pad: 8, size: d.s.fs || 13, hit: false }));
+    if (g.hl && d.s.text) g.text(d.s.text, x + 14, y - 10, txtSt(d, { c: '#d1d1d6', bg: 'rgba(24,24,24,0.97)', bd: d.s.c, pad: 8, size: d.s.fs || 13, hit: false }));
   }
-  const noteD = txtD({ c: '#2962ff', tc: '#d1d4dc', fs: 13 });
+  const noteD = txtD({ c: '#0a84ff', tc: '#d1d1d6', fs: 13 });
   T.note = { name: '노트', n: 1, text: true, defaults: noteD, ui: [F.textOnly, F.color('c', '아이콘 색')], draw: noteDraw };
   T.anote = { name: '고정 노트(화면)', n: 1, text: true, screen: true, noAxis: true, defaults: noteD, ui: [F.textOnly, F.color('c', '아이콘 색')], draw: noteDraw };
   T.callout = {
-    name: '콜아웃', n: 2, text: true, defaults: txtD({ c: '#2962ff', tc: '#ffffff', fill: true, fc: '#2962ff', fa: 1 }), ui: [F.textOnly, F.color('fc', '배경 색'), F.color('c', '테두리 색')],
+    name: '콜아웃', n: 2, text: true, defaults: txtD({ c: '#0a84ff', tc: '#ffffff', fill: true, fc: '#0a84ff', fa: 1 }), ui: [F.textOnly, F.color('fc', '배경 색'), F.color('c', '테두리 색')],
     askText: true,
     draw(g, d, P) {
       if (P.length < 2) { g.circle(P[0].x, P[0].y, 3, { c: d.s.c }); return; }
@@ -1157,7 +1157,7 @@
     },
   };
   T.comment = {
-    name: '코멘트', n: 1, text: true, defaults: txtD({ c: '#2962ff', tc: '#ffffff', fill: true, fc: '#2962ff', fa: 1 }), ui: [F.textOnly, F.color('fc', '배경 색')],
+    name: '코멘트', n: 1, text: true, defaults: txtD({ c: '#0a84ff', tc: '#ffffff', fill: true, fc: '#0a84ff', fa: 1 }), ui: [F.textOnly, F.color('fc', '배경 색')],
     draw(g, d, P) {
       const { x, y } = P[0];
       const box = g.text(d.s.text || '코멘트', x, y - 12, txtSt(d, { c: d.s.tc, base: 'bottom', bg: U.rgba(d.s.fc, d.s.fa != null ? d.s.fa : 1), pad: 7, r: 8 }));
@@ -1165,7 +1165,7 @@
     },
   };
   T.pricelabel = {
-    name: '가격 라벨', n: 1, defaults: txtD({ c: '#2962ff', tc: '#ffffff', fs: 12, fill: true, fc: '#2962ff', fa: 1 }), ui: [F.color('fc', '배경 색'), F.color('tc', '글자 색'), F.num('fs', '글자 크기', { step: 1 })],
+    name: '가격 라벨', n: 1, defaults: txtD({ c: '#0a84ff', tc: '#ffffff', fs: 12, fill: true, fc: '#0a84ff', fa: 1 }), ui: [F.color('fc', '배경 색'), F.color('tc', '글자 색'), F.num('fs', '글자 크기', { step: 1 })],
     draw(g, d, P, C) {
       const { x, y } = P[0];
       g.poly([{ x, y }, { x: x + 8, y: y - 10 }, { x: x + 16, y: y - 10 }], { close: true, fill: U.rgba(d.s.fc, 1), noStroke: true });
@@ -1173,7 +1173,7 @@
     },
   };
   T.pricenote = {
-    name: '가격 노트', n: 2, defaults: D({ c: '#2962ff', w: 1, tc: '#ffffff', fs: 12 }), ui: [F.line],
+    name: '가격 노트', n: 2, defaults: D({ c: '#0a84ff', w: 1, tc: '#ffffff', fs: 12 }), ui: [F.line],
     draw(g, d, P, C) {
       if (P.length < 2) return;
       const [a, b] = P;
@@ -1183,7 +1183,7 @@
     },
   };
   T.signpost = {
-    name: '사인포스트', n: 1, text: true, defaults: txtD({ c: '#2962ff', tc: '#ffffff', fs: 13, text: '', down: false }), ui: [F.textOnly, F.color('c', '색'), F.bool('down', '아래쪽으로')],
+    name: '사인포스트', n: 1, text: true, defaults: txtD({ c: '#0a84ff', tc: '#ffffff', fs: 13, text: '', down: false }), ui: [F.textOnly, F.color('c', '색'), F.bool('down', '아래쪽으로')],
     draw(g, d, P) {
       const { x, y } = P[0], k = d.s.down ? 1 : -1, hgt = 46;
       g.line(x, y, x, y + k * hgt, { c: d.s.c, w: 1.5 });
@@ -1192,7 +1192,7 @@
     },
   };
   T.flag = {
-    name: '깃발 표시', n: 1, defaults: { c: '#f23645', w: 1, ls: 0 }, ui: [F.color('c', '색')],
+    name: '깃발 표시', n: 1, defaults: { c: '#ff453a', w: 1, ls: 0 }, ui: [F.color('c', '색')],
     draw(g, d, P) {
       const { x, y } = P[0];
       g.line(x, y, x, y - 24, { c: d.s.c, w: 2 });
@@ -1200,7 +1200,7 @@
     },
   };
   T.emoji = {
-    name: '이모지·아이콘', n: 1, defaults: { c: '#2962ff', w: 1, ls: 0, text: '🚀', fs: 30 }, ui: [F.str('text', '이모지/문자'), F.num('fs', '크기', { step: 2 })],
+    name: '이모지·아이콘', n: 1, defaults: { c: '#0a84ff', w: 1, ls: 0, text: '🚀', fs: 30 }, ui: [F.str('text', '이모지/문자'), F.num('fs', '크기', { step: 2 })],
     draw(g, d, P) { g.text(d.s.text || '🚀', P[0].x, P[0].y, { align: 'center', base: 'middle', size: d.s.fs || 30, c: '#fff' }); },
   };
 

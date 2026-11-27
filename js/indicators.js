@@ -222,9 +222,9 @@
     name: '거래량 (Volume)', short: 'Vol', cat: 'vol', pane: 'main', fmt: 'vol', overlayVol: true,
     inputs: [inp('ma', '이동평균 표시', 'bool', true), inp('maLen', '이동평균 길이', 'int', 20, { min: 1 }), inp('sep', '별도 창에 표시', 'bool', false), inp('h', '차지 높이(%)', 'int', 22, { min: 5, max: 80 })],
     plots: [
-      { k: 'up', n: '상승 거래량', c: '#26a69a', a: 0.5, t: 'col' },
-      { k: 'dn', n: '하락 거래량', c: '#ef5350', a: 0.5, t: 'col' },
-      { k: 'maV', n: '거래량 MA', c: '#2962ff', w: 1 },
+      { k: 'up', n: '상승 거래량', c: '#66d4cf', a: 0.5, t: 'col' },
+      { k: 'dn', n: '하락 거래량', c: '#ff6961', a: 0.5, t: 'col' },
+      { k: 'maV', n: '거래량 MA', c: '#0a84ff', w: 1 },
     ],
     paneOf: (I) => (I.sep ? 'sub' : 'main'),
     zero: true,
@@ -258,11 +258,11 @@
   IND.ma = {
     name: '이동평균 (MA)', short: 'MA', cat: 'trend', pane: 'main', fmt: 'price',
     inputs: [inp('len', '길이', 'int', 20, { min: 1 }), inp('type', '유형', 'sel', 'SMA', { o: TA.MA_TYPES }), inp('src', '소스', 'src', 'close'), inp('off', '오프셋', 'int', 0)],
-    plots: [{ k: 'ma', n: 'MA', c: '#2962ff', w: 1.5 }],
+    plots: [{ k: 'ma', n: 'MA', c: '#0a84ff', w: 1.5 }],
     label: (I) => I.type + ' ' + I.len + (I.src !== 'close' ? ' ' + I.src : ''),
     calc(b, I) { return { ma: TA.ma(I.type, TA.src(b, I.src), I.len, TA.src(b, 'volume')), _off: { ma: I.off | 0 } }; },
   };
-  const MAS_DEF = [[5, 1, '#f7525f'], [10, 0, '#ff9800'], [20, 1, '#ffd54f'], [60, 1, '#22ab94'], [120, 1, '#2962ff'], [240, 0, '#ab47bc']];
+  const MAS_DEF = [[5, 1, '#ff6961'], [10, 0, '#ff9f0a'], [20, 1, '#ffe36e'], [60, 1, '#30d158'], [120, 1, '#0a84ff'], [240, 0, '#bf5af2']];
   IND.mas = {
     name: '다중 이동평균 (5·20·60·120)', short: 'MAs', cat: 'trend', pane: 'main', fmt: 'price',
     inputs: [inp('type', '유형', 'sel', 'SMA', { o: TA.MA_TYPES }), inp('src', '소스', 'src', 'close')].concat(
@@ -279,7 +279,7 @@
   IND.bb = {
     name: '볼린저 밴드 (BB)', short: 'BB', cat: 'vola', pane: 'main', fmt: 'price',
     inputs: [inp('len', '길이', 'int', 20, { min: 1 }), inp('mult', '표준편차 배수', 'float', 2, { step: 0.1 }), inp('src', '소스', 'src', 'close'), inp('type', '기준선 유형', 'sel', 'SMA', { o: TA.MA_TYPES })],
-    plots: [{ k: 'mid', n: '기준선', c: '#ff6d00', w: 1 }, { k: 'up', n: '상단', c: '#2962ff', w: 1 }, { k: 'lo', n: '하단', c: '#2962ff', w: 1 }, { k: 'bg', n: '배경', c: '#2962ff', a: 0.06, t: 'fill' }],
+    plots: [{ k: 'mid', n: '기준선', c: '#ff9500', w: 1 }, { k: 'up', n: '상단', c: '#0a84ff', w: 1 }, { k: 'lo', n: '하단', c: '#0a84ff', w: 1 }, { k: 'bg', n: '배경', c: '#0a84ff', a: 0.06, t: 'fill' }],
     label: (I) => 'BB ' + I.len + ' ' + I.mult,
     calc(b, I) {
       const s = TA.src(b, I.src), m = TA.ma(I.type, s, I.len, TA.src(b, 'volume')), sd = TA.stdev(s, I.len);
@@ -290,7 +290,7 @@
   IND.env = {
     name: '엔벨로프 (Envelope)', short: 'Env', cat: 'vola', pane: 'main', fmt: 'price',
     inputs: [inp('len', '길이', 'int', 20, { min: 1 }), inp('pct', '퍼센트(%)', 'float', 10, { step: 0.5 }), inp('type', '유형', 'sel', 'SMA', { o: TA.MA_TYPES }), inp('src', '소스', 'src', 'close')],
-    plots: [{ k: 'mid', n: '기준선', c: '#ff6d00', w: 1 }, { k: 'up', n: '상단', c: '#2962ff', w: 1 }, { k: 'lo', n: '하단', c: '#2962ff', w: 1 }, { k: 'bg', n: '배경', c: '#2962ff', a: 0.05, t: 'fill' }],
+    plots: [{ k: 'mid', n: '기준선', c: '#ff9500', w: 1 }, { k: 'up', n: '상단', c: '#0a84ff', w: 1 }, { k: 'lo', n: '하단', c: '#0a84ff', w: 1 }, { k: 'bg', n: '배경', c: '#0a84ff', a: 0.05, t: 'fill' }],
     label: (I) => 'Env ' + I.len + ' ' + I.pct + '%',
     calc(b, I) { const m = TA.ma(I.type, TA.src(b, I.src), I.len, TA.src(b, 'volume')); const k = I.pct / 100; return { mid: m, up: m.map((x) => x * (1 + k)), lo: m.map((x) => x * (1 - k)) }; },
     render(R, ind, o) { R.fillSt(o.up, o.lo, 'bg'); R.plot('mid', o.mid); R.plot('up', o.up); R.plot('lo', o.lo); },
@@ -298,7 +298,7 @@
   IND.vwap = {
     name: 'VWAP (거래량가중평균가)', short: 'VWAP', cat: 'vol', pane: 'main', fmt: 'price',
     inputs: [inp('anchor', '기준 기간', 'sel', '일', { o: ['일', '주', '월'] }), inp('src', '소스', 'src', 'hlc3'), inp('b1', '밴드 1 배수(0=끔)', 'float', 0, { step: 0.5 }), inp('b2', '밴드 2 배수(0=끔)', 'float', 0, { step: 0.5 })],
-    plots: [{ k: 'vw', n: 'VWAP', c: '#2962ff', w: 1.5 }, { k: 'u1', n: '상단 1', c: '#4caf50', w: 1 }, { k: 'l1', n: '하단 1', c: '#4caf50', w: 1 }, { k: 'u2', n: '상단 2', c: '#808000', w: 1 }, { k: 'l2', n: '하단 2', c: '#808000', w: 1 }, { k: 'bg', n: '밴드 배경', c: '#4caf50', a: 0.06, t: 'fill' }],
+    plots: [{ k: 'vw', n: 'VWAP', c: '#0a84ff', w: 1.5 }, { k: 'u1', n: '상단 1', c: '#34c759', w: 1 }, { k: 'l1', n: '하단 1', c: '#34c759', w: 1 }, { k: 'u2', n: '상단 2', c: '#808000', w: 1 }, { k: 'l2', n: '하단 2', c: '#808000', w: 1 }, { k: 'bg', n: '밴드 배경', c: '#34c759', a: 0.06, t: 'fill' }],
     label: (I) => 'VWAP ' + I.anchor,
     calc(b, I, ctx) {
       const iv = { 일: '1D', 주: '1W', 월: '1M' }[I.anchor] || '1D';
@@ -329,9 +329,9 @@
     name: '일목균형표 (Ichimoku)', short: 'Ichi', cat: 'trend', pane: 'main', fmt: 'price',
     inputs: [inp('conv', '전환선 기간', 'int', 9, { min: 1 }), inp('base', '기준선 기간', 'int', 26, { min: 1 }), inp('spanB', '선행스팬2 기간', 'int', 52, { min: 1 }), inp('disp', '후행/선행 이동', 'int', 26, { min: 1 })],
     plots: [
-      { k: 'cv', n: '전환선', c: '#2962ff', w: 1 }, { k: 'bs', n: '기준선', c: '#b71c1c', w: 1 }, { k: 'lag', n: '후행스팬', c: '#43a047', w: 1 },
-      { k: 'sa', n: '선행스팬1', c: '#a5d6a7', w: 1 }, { k: 'sb', n: '선행스팬2', c: '#ef9a9a', w: 1 },
-      { k: 'cu', n: '구름(상승)', c: '#43a047', a: 0.12, t: 'fill' }, { k: 'cd', n: '구름(하락)', c: '#f44336', a: 0.12, t: 'fill' },
+      { k: 'cv', n: '전환선', c: '#0a84ff', w: 1 }, { k: 'bs', n: '기준선', c: '#d70015', w: 1 }, { k: 'lag', n: '후행스팬', c: '#248a3d', w: 1 },
+      { k: 'sa', n: '선행스팬1', c: '#a8e6b4', w: 1 }, { k: 'sb', n: '선행스팬2', c: '#ff8a80', w: 1 },
+      { k: 'cu', n: '구름(상승)', c: '#248a3d', a: 0.12, t: 'fill' }, { k: 'cd', n: '구름(하락)', c: '#ff453a', a: 0.12, t: 'fill' },
     ],
     label: (I) => 'Ichimoku ' + I.conv + ' ' + I.base + ' ' + I.spanB + ' ' + I.disp,
     calc(b, I) {
@@ -350,7 +350,7 @@
   IND.supertrend = {
     name: '슈퍼트렌드 (Supertrend)', short: 'ST', cat: 'trend', pane: 'main', fmt: 'price',
     inputs: [inp('len', 'ATR 길이', 'int', 10, { min: 1 }), inp('mult', '배수', 'float', 3, { step: 0.1 })],
-    plots: [{ k: 'up', n: '상승 추세', c: '#089981', w: 1.5 }, { k: 'dn', n: '하락 추세', c: '#f23645', w: 1.5 }, { k: 'bg', n: '배경', c: '#787b86', a: 0.08, t: 'fill' }],
+    plots: [{ k: 'up', n: '상승 추세', c: '#30d158', w: 1.5 }, { k: 'dn', n: '하락 추세', c: '#ff453a', w: 1.5 }, { k: 'bg', n: '배경', c: '#8e8e93', a: 0.08, t: 'fill' }],
     label: (I) => 'Supertrend ' + I.len + ' ' + I.mult,
     calc(b, I) {
       const n = b.length, atr = TA.atr(b, I.len), st = arr(n), dir = arr(n);
@@ -386,7 +386,7 @@
   IND.psar = {
     name: '파라볼릭 SAR', short: 'SAR', cat: 'trend', pane: 'main', fmt: 'price',
     inputs: [inp('start', '시작', 'float', 0.02, { step: 0.01 }), inp('inc', '증가', 'float', 0.02, { step: 0.01 }), inp('max', '최대', 'float', 0.2, { step: 0.01 })],
-    plots: [{ k: 'sar', n: 'SAR', c: '#2962ff', w: 1, t: 'dots' }],
+    plots: [{ k: 'sar', n: 'SAR', c: '#0a84ff', w: 1, t: 'dots' }],
     label: (I) => 'SAR ' + I.start + ' ' + I.inc + ' ' + I.max,
     calc(b, I) {
       const n = b.length, o = arr(n);
@@ -427,10 +427,10 @@
       inp('alert', '돌파·이탈 시 알림', 'bool', false),
     ],
     plots: [
-      { k: 'res', n: '저항 추세선', c: '#f23645', w: 2 },
-      { k: 'sup', n: '지지 추세선', c: '#089981', w: 2 },
-      { k: 'resB', n: '돌파된 저항선', c: '#f23645', w: 1, t: 'col' },
-      { k: 'supB', n: '이탈된 지지선', c: '#089981', w: 1, t: 'col' },
+      { k: 'res', n: '저항 추세선', c: '#ff453a', w: 2 },
+      { k: 'sup', n: '지지 추세선', c: '#30d158', w: 2 },
+      { k: 'resB', n: '돌파된 저항선', c: '#ff453a', w: 1, t: 'col' },
+      { k: 'supB', n: '이탈된 지지선', c: '#30d158', w: 1, t: 'col' },
     ],
     scaleKeys: [],
     label: (I) => '자동 추세선 ' + I.len + ' · ' + I.look + '봉',
@@ -548,9 +548,9 @@
     name: '매물대 (거래량 프로파일, 보이는 범위)', short: 'VPVR', cat: 'vol', pane: 'main', fmt: 'vol', noScale: true,
     inputs: [inp('rows', '행 개수', 'int', 24, { min: 4, max: 300 }), inp('va', '밸류 에어리어(%)', 'int', 70, { min: 10, max: 100 }), inp('width', '폭(%)', 'int', 30, { min: 5, max: 100 }), inp('side', '위치', 'sel', '오른쪽', { o: ['오른쪽', '왼쪽'] }), inp('poc', 'POC 선 표시', 'bool', true)],
     plots: [
-      { k: 'up', n: '매수 거래량', c: '#1e88e5', a: 0.28, t: 'col' }, { k: 'dn', n: '매도 거래량', c: '#fbc02d', a: 0.28, t: 'col' },
-      { k: 'vup', n: '밸류영역 매수', c: '#1e88e5', a: 0.6, t: 'col' }, { k: 'vdn', n: '밸류영역 매도', c: '#fbc02d', a: 0.6, t: 'col' },
-      { k: 'pocL', n: 'POC', c: '#ff5252', w: 1, t: 'col' },
+      { k: 'up', n: '매수 거래량', c: '#64d2ff', a: 0.28, t: 'col' }, { k: 'dn', n: '매도 거래량', c: '#ffd60a', a: 0.28, t: 'col' },
+      { k: 'vup', n: '밸류영역 매수', c: '#64d2ff', a: 0.6, t: 'col' }, { k: 'vdn', n: '밸류영역 매도', c: '#ffd60a', a: 0.6, t: 'col' },
+      { k: 'pocL', n: 'POC', c: '#ff6961', w: 1, t: 'col' },
     ],
     label: (I) => 'VPVR ' + I.rows,
     calc() { return {}; },
@@ -576,10 +576,10 @@
       inp('div', '다이버전스 표시', 'bool', false),
     ],
     plots: [
-      { k: 'rsi', n: 'RSI', c: '#7e57c2', w: 1.5 }, { k: 'ma', n: 'RSI 이동평균', c: '#f7c843', w: 1 },
-      { k: 'bbu', n: '볼린저 상단', c: '#4caf50', w: 1 }, { k: 'bbl', n: '볼린저 하단', c: '#4caf50', w: 1 },
-      { k: 'band', n: '과매수/과매도 배경', c: '#7e57c2', a: 0.08, t: 'fill' }, { k: 'lv', n: '기준선', c: '#787b86', w: 1, t: 'level' },
-      { k: 'bull', n: '강세 다이버전스', c: '#22ab94', w: 1.5, t: 'col' }, { k: 'bear', n: '약세 다이버전스', c: '#f23645', w: 1.5, t: 'col' },
+      { k: 'rsi', n: 'RSI', c: '#5e5ce6', w: 1.5 }, { k: 'ma', n: 'RSI 이동평균', c: '#f7c843', w: 1 },
+      { k: 'bbu', n: '볼린저 상단', c: '#34c759', w: 1 }, { k: 'bbl', n: '볼린저 하단', c: '#34c759', w: 1 },
+      { k: 'band', n: '과매수/과매도 배경', c: '#5e5ce6', a: 0.08, t: 'fill' }, { k: 'lv', n: '기준선', c: '#8e8e93', w: 1, t: 'level' },
+      { k: 'bull', n: '강세 다이버전스', c: '#30d158', w: 1.5, t: 'col' }, { k: 'bear', n: '약세 다이버전스', c: '#ff453a', w: 1.5, t: 'col' },
     ],
     label: (I) => 'RSI ' + I.len + (I.src !== 'close' ? ' ' + I.src : '') + (I.maType !== '없음' ? ' · ' + I.maType + ' ' + I.maLen : ''),
     calc(b, I) {
@@ -606,10 +606,10 @@
     name: 'MACD', short: 'MACD', cat: 'osc', pane: 'sub', fmt: 'auto', zero: false,
     inputs: [inp('fast', '단기', 'int', 12, { min: 1 }), inp('slow', '장기', 'int', 26, { min: 1 }), inp('sig', '시그널', 'int', 9, { min: 1 }), inp('src', '소스', 'src', 'close'), inp('oscT', '오실레이터 MA', 'sel', 'EMA', { o: ['EMA', 'SMA'] }), inp('sigT', '시그널 MA', 'sel', 'EMA', { o: ['EMA', 'SMA'] })],
     plots: [
-      { k: 'hist', n: '히스토그램', c: '#26a69a', t: 'hist' }, { k: 'macd', n: 'MACD', c: '#2962ff', w: 1.5 }, { k: 'signal', n: '시그널', c: '#ff6d00', w: 1.5 },
-      { k: 'h1', n: '히스토 강한 상승', c: '#26a69a', t: 'col' }, { k: 'h2', n: '히스토 약한 상승', c: '#b2dfdb', t: 'col' },
-      { k: 'h3', n: '히스토 약한 하락', c: '#ffcdd2', t: 'col' }, { k: 'h4', n: '히스토 강한 하락', c: '#ff5252', t: 'col' },
-      { k: 'lv', n: '0선', c: '#787b86', w: 1, t: 'level' },
+      { k: 'hist', n: '히스토그램', c: '#66d4cf', t: 'hist' }, { k: 'macd', n: 'MACD', c: '#0a84ff', w: 1.5 }, { k: 'signal', n: '시그널', c: '#ff9500', w: 1.5 },
+      { k: 'h1', n: '히스토 강한 상승', c: '#66d4cf', t: 'col' }, { k: 'h2', n: '히스토 약한 상승', c: '#b6ece9', t: 'col' },
+      { k: 'h3', n: '히스토 약한 하락', c: '#ffd1cf', t: 'col' }, { k: 'h4', n: '히스토 강한 하락', c: '#ff6961', t: 'col' },
+      { k: 'lv', n: '0선', c: '#8e8e93', w: 1, t: 'level' },
     ],
     label: (I) => 'MACD ' + I.fast + ' ' + I.slow + ' ' + I.sig,
     calc(b, I) {
@@ -624,7 +624,7 @@
       R.plot('macd', o.macd); R.plot('signal', o.signal);
     },
   };
-  const stochPlots = [{ k: 'k', n: '%K', c: '#2962ff', w: 1.5 }, { k: 'd', n: '%D', c: '#ff6d00', w: 1.5 }, { k: 'band', n: '배경', c: '#2962ff', a: 0.06, t: 'fill' }, { k: 'lv', n: '기준선', c: '#787b86', w: 1, t: 'level' }];
+  const stochPlots = [{ k: 'k', n: '%K', c: '#0a84ff', w: 1.5 }, { k: 'd', n: '%D', c: '#ff9500', w: 1.5 }, { k: 'band', n: '배경', c: '#0a84ff', a: 0.06, t: 'fill' }, { k: 'lv', n: '기준선', c: '#8e8e93', w: 1, t: 'level' }];
   IND.stoch = {
     name: '스토캐스틱 (Stochastic)', short: 'Stoch', cat: 'osc', pane: 'sub', fmt: 2,
     inputs: [inp('k', '%K 길이', 'int', 14, { min: 1 }), inp('sk', '%K 스무딩', 'int', 1, { min: 1 }), inp('d', '%D 스무딩', 'int', 3, { min: 1 }), inp('ob', '상단', 'float', 80), inp('os', '하단', 'float', 20)],
@@ -646,7 +646,7 @@
   IND.obv = {
     name: 'OBV (거래량 균형)', short: 'OBV', cat: 'vol', pane: 'sub', fmt: 'vol',
     inputs: [inp('maType', '이동평균 유형', 'sel', '없음', { o: ['없음'].concat(TA.MA_TYPES) }), inp('maLen', '이동평균 길이', 'int', 20, { min: 1 })],
-    plots: [{ k: 'obv', n: 'OBV', c: '#2962ff', w: 1.5 }, { k: 'ma', n: 'OBV MA', c: '#ff9800', w: 1 }],
+    plots: [{ k: 'obv', n: 'OBV', c: '#0a84ff', w: 1.5 }, { k: 'ma', n: 'OBV MA', c: '#ff9f0a', w: 1 }],
     label: (I) => 'OBV' + (I.maType !== '없음' ? ' · ' + I.maType + ' ' + I.maLen : ''),
     calc(b, I) {
       const n = b.length, o = new Array(n); let s = 0;
@@ -657,7 +657,7 @@
   IND.mfi = {
     name: 'MFI (자금흐름지수)', short: 'MFI', cat: 'vol', pane: 'sub', fmt: 2,
     inputs: [inp('len', '길이', 'int', 14, { min: 1 }), inp('ob', '과매수', 'float', 80), inp('os', '과매도', 'float', 20)],
-    plots: [{ k: 'mfi', n: 'MFI', c: '#7e57c2', w: 1.5 }, { k: 'band', n: '배경', c: '#7e57c2', a: 0.08, t: 'fill' }, { k: 'lv', n: '기준선', c: '#787b86', w: 1, t: 'level' }],
+    plots: [{ k: 'mfi', n: 'MFI', c: '#5e5ce6', w: 1.5 }, { k: 'band', n: '배경', c: '#5e5ce6', a: 0.08, t: 'fill' }, { k: 'lv', n: '기준선', c: '#8e8e93', w: 1, t: 'level' }],
     label: (I) => 'MFI ' + I.len,
     calc(b, I) {
       const n = b.length, tp = TA.src(b, 'hlc3'), pos = arr(n), neg = arr(n);
@@ -671,7 +671,7 @@
   IND.cmf = {
     name: 'CMF (차이킨 자금흐름)', short: 'CMF', cat: 'vol', pane: 'sub', fmt: 3,
     inputs: [inp('len', '길이', 'int', 20, { min: 1 })],
-    plots: [{ k: 'cmf', n: 'CMF', c: '#43a047', w: 1.5 }, { k: 'lv', n: '0선', c: '#787b86', w: 1, t: 'level' }],
+    plots: [{ k: 'cmf', n: 'CMF', c: '#248a3d', w: 1.5 }, { k: 'lv', n: '0선', c: '#8e8e93', w: 1, t: 'level' }],
     label: (I) => 'CMF ' + I.len,
     calc(b, I) {
       const mfv = b.map((x) => { const r = x.h - x.l; return r > 0 ? (((x.c - x.l) - (x.h - x.c)) / r) * x.v : 0; });
@@ -684,21 +684,21 @@
   IND.ad = {
     name: 'A/D (매집/분산)', short: 'A/D', cat: 'vol', pane: 'sub', fmt: 'vol',
     inputs: [],
-    plots: [{ k: 'ad', n: 'A/D', c: '#ff9800', w: 1.5 }],
+    plots: [{ k: 'ad', n: 'A/D', c: '#ff9f0a', w: 1.5 }],
     label: () => 'Accum/Dist',
     calc(b) { return { ad: TA.cum(b.map((x) => { const r = x.h - x.l; return r > 0 ? (((x.c - x.l) - (x.h - x.c)) / r) * x.v : 0; })) }; },
   };
   IND.pvt = {
     name: 'PVT (가격거래량추세)', short: 'PVT', cat: 'vol', pane: 'sub', fmt: 'vol',
     inputs: [],
-    plots: [{ k: 'pvt', n: 'PVT', c: '#2962ff', w: 1.5 }],
+    plots: [{ k: 'pvt', n: 'PVT', c: '#0a84ff', w: 1.5 }],
     label: () => 'PVT',
     calc(b) { return { pvt: TA.cum(b.map((x, i) => (i > 0 && b[i - 1].c ? ((x.c - b[i - 1].c) / b[i - 1].c) * x.v : 0))) }; },
   };
   IND.vosc = {
     name: '거래량 오실레이터', short: 'VolOsc', cat: 'vol', pane: 'sub', fmt: 2,
     inputs: [inp('s', '단기', 'int', 5, { min: 1 }), inp('l', '장기', 'int', 10, { min: 1 })],
-    plots: [{ k: 'vo', n: '거래량 오실레이터(%)', c: '#2962ff', w: 1.5 }, { k: 'lv', n: '0선', c: '#787b86', w: 1, t: 'level' }],
+    plots: [{ k: 'vo', n: '거래량 오실레이터(%)', c: '#0a84ff', w: 1.5 }, { k: 'lv', n: '0선', c: '#8e8e93', w: 1, t: 'level' }],
     label: (I) => 'Volume Osc ' + I.s + ' ' + I.l,
     calc(b, I) { const v = TA.src(b, 'volume'), s = TA.ema(v, I.s), l = TA.ema(v, I.l); return { vo: s.map((x, i) => (l[i] ? (100 * (x - l[i])) / l[i] : NaN)) }; },
     levels: () => [0],
@@ -707,14 +707,14 @@
   IND.atr = {
     name: 'ATR (평균진폭)', short: 'ATR', cat: 'vola', pane: 'sub', fmt: 'auto',
     inputs: [inp('len', '길이', 'int', 14, { min: 1 }), inp('type', '스무딩', 'sel', 'RMA', { o: ['RMA', 'SMA', 'EMA', 'WMA'] })],
-    plots: [{ k: 'atr', n: 'ATR', c: '#b71c1c', w: 1.5 }],
+    plots: [{ k: 'atr', n: 'ATR', c: '#d70015', w: 1.5 }],
     label: (I) => 'ATR ' + I.len + ' ' + I.type,
     calc(b, I) { return { atr: TA.ma(I.type, TA.tr(b), I.len) }; },
   };
   IND.cci = {
     name: 'CCI (상품채널지수)', short: 'CCI', cat: 'osc', pane: 'sub', fmt: 2,
     inputs: [inp('len', '길이', 'int', 20, { min: 1 }), inp('src', '소스', 'src', 'hlc3')],
-    plots: [{ k: 'cci', n: 'CCI', c: '#2962ff', w: 1.5 }, { k: 'band', n: '배경', c: '#2962ff', a: 0.06, t: 'fill' }, { k: 'lv', n: '기준선', c: '#787b86', w: 1, t: 'level' }],
+    plots: [{ k: 'cci', n: 'CCI', c: '#0a84ff', w: 1.5 }, { k: 'band', n: '배경', c: '#0a84ff', a: 0.06, t: 'fill' }, { k: 'lv', n: '기준선', c: '#8e8e93', w: 1, t: 'level' }],
     label: (I) => 'CCI ' + I.len,
     calc(b, I) {
       const s = TA.src(b, I.src), m = TA.sma(s, I.len), o = arr(b.length), n = I.len;
@@ -727,7 +727,7 @@
   IND.dmi = {
     name: 'DMI / ADX (방향성지수)', short: 'DMI', cat: 'trend', pane: 'sub', fmt: 2,
     inputs: [inp('len', 'DI 길이', 'int', 14, { min: 1 }), inp('adx', 'ADX 스무딩', 'int', 14, { min: 1 })],
-    plots: [{ k: 'adx', n: 'ADX', c: '#f50057', w: 1.5 }, { k: 'p', n: '+DI', c: '#2962ff', w: 1.2 }, { k: 'm', n: '-DI', c: '#ff6d00', w: 1.2 }],
+    plots: [{ k: 'adx', n: 'ADX', c: '#ff2d55', w: 1.5 }, { k: 'p', n: '+DI', c: '#0a84ff', w: 1.2 }, { k: 'm', n: '-DI', c: '#ff9500', w: 1.2 }],
     label: (I) => 'DMI ' + I.len + ' ' + I.adx,
     calc(b, I) {
       const n = b.length, pd = arr(n), md = arr(n);
@@ -741,7 +741,7 @@
   IND.willr = {
     name: '윌리엄스 %R', short: '%R', cat: 'osc', pane: 'sub', fmt: 2,
     inputs: [inp('len', '길이', 'int', 14, { min: 1 })],
-    plots: [{ k: 'r', n: '%R', c: '#7e57c2', w: 1.5 }, { k: 'band', n: '배경', c: '#7e57c2', a: 0.06, t: 'fill' }, { k: 'lv', n: '기준선', c: '#787b86', w: 1, t: 'level' }],
+    plots: [{ k: 'r', n: '%R', c: '#5e5ce6', w: 1.5 }, { k: 'band', n: '배경', c: '#5e5ce6', a: 0.06, t: 'fill' }, { k: 'lv', n: '기준선', c: '#8e8e93', w: 1, t: 'level' }],
     label: (I) => '%R ' + I.len,
     calc(b, I) { const hh = TA.highest(TA.src(b, 'high'), I.len), ll = TA.lowest(TA.src(b, 'low'), I.len); return { r: b.map((x, i) => { const r = hh[i] - ll[i]; return r > 0 ? (-100 * (hh[i] - x.c)) / r : NaN; }) }; },
     levels: () => [-20, -80],
@@ -750,7 +750,7 @@
   IND.mom = {
     name: '모멘텀 (Momentum)', short: 'Mom', cat: 'osc', pane: 'sub', fmt: 'auto',
     inputs: [inp('len', '길이', 'int', 10, { min: 1 }), inp('src', '소스', 'src', 'close')],
-    plots: [{ k: 'm', n: '모멘텀', c: '#2962ff', w: 1.5 }, { k: 'lv', n: '0선', c: '#787b86', w: 1, t: 'level' }],
+    plots: [{ k: 'm', n: '모멘텀', c: '#0a84ff', w: 1.5 }, { k: 'lv', n: '0선', c: '#8e8e93', w: 1, t: 'level' }],
     label: (I) => 'Mom ' + I.len,
     calc(b, I) { const s = TA.src(b, I.src); return { m: s.map((v, i) => (i >= I.len ? v - s[i - I.len] : NaN)) }; },
     levels: () => [0],
