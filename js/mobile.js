@@ -763,14 +763,19 @@
       }
       last.c = q.last;
     }
-    precOf(k, v) {
+    precOf(k, v) { // 소수 자리: 차트가 있으면 차트 기준, 없으면 지금까지 본 값(현재가·시가·고가·저가·전일)의 최대 자리
       const ch = this.app.charts.find((x) => x.key === k && x.bars.length);
       if (ch) return v != null ? Math.min(ch.prec, capDec(v)) : ch.prec;
       let d = this.pc[k];
-      if (v != null && isFinite(v)) {
-        const dv = Math.min(U.decOf(+(+v).toPrecision(12)), capDec(v));
-        if (d == null || dv > d) d = this.pc[k] = dv;
+      const q = QH().get(k), sig = k.startsWith('stock:') ? 7 : 12; // 야후 값은 float 잡음이 있어 유효숫자 7자리로 자름
+      const vals = [v];
+      if (q) vals.push(q.last, q.open, q.high, q.low, q.base);
+      for (const x of vals) {
+        if (x == null || !isFinite(x) || x === 0) continue;
+        const dv = Math.min(U.decOf(+(+x).toPrecision(sig)), capDec(x));
+        if (d == null || dv > d) d = dv;
       }
+      if (d != null) this.pc[k] = d;
       return d != null ? d : 2;
     }
     seedPrec(k, v) {
