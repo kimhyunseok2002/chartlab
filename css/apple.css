@@ -1,8 +1,8 @@
-/* TradingHyun — apple.css : 애플 느낌 디자인 층 (style.css·mobile.css 위에 덮어씀)
+/* TradingHyun — apple.css : 애플 느낌 디자인 층 — PC 화면 전용 (모바일 화면에는 적용하지 않음)
    둥근 버튼(캡슐·원), 세그먼트 컨트롤, 반투명 재질, iOS 스위치, 떠 있는 도구 팔레트, 둥근 차트 카드 */
 
 /* ---------- 색·글꼴 토큰 (애플 시스템 색) ---------- */
-:root {
+body:not(.mobile) {
   --win: #161618; --bg: #000000; --panel: #1c1c1e; --panel2: #2c2c2e; --panel3: #3a3a3c;
   --line: rgba(84, 84, 88, .55); --text: #f5f5f7; --dim: #98989d;
   --acc: #0a84ff; --acc-t: rgba(10, 132, 255, .2); --hover: rgba(255, 255, 255, .08);
@@ -11,18 +11,18 @@
   --green: #30d158; --red: #ff453a; --orange: #ff9f0a; --seg-on: #636366; --sw-off: rgba(120, 120, 128, .36);
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Pretendard Variable", Pretendard, "Segoe UI Variable Text", "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", Roboto, sans-serif;
 }
-body.navy {
+body:not(.mobile).navy {
   --win: #0a101c; --bg: #0b1220; --panel: #131b2c; --panel2: #1c2638; --panel3: #283349; --line: rgba(100, 116, 150, .3);
   --text: #e5e9f2; --dim: #8a94a8; --hover: rgba(255, 255, 255, .07); --mat: rgba(22, 30, 46, .82); --lghover: rgba(28, 38, 56, .75); --seg-on: #3a4660;
 }
-body.light {
+body:not(.mobile).light {
   --win: #ececf0; --bg: #ffffff; --panel: #ffffff; --panel2: #e8e8ed; --panel3: #dcdce1; --line: rgba(60, 60, 67, .16);
   --text: #1d1d1f; --dim: #86868b; --acc: #007aff; --acc-t: rgba(0, 122, 255, .12); --hover: rgba(0, 0, 0, .05);
   --mat: rgba(250, 250, 252, .84); --mat-edge: rgba(0, 0, 0, .08); --shadow: rgba(0, 0, 0, .16); --lghover: rgba(242, 242, 247, .92);
   --green: #34c759; --red: #ff3b30; --orange: #ff9500; --seg-on: #ffffff; --sw-off: rgba(120, 120, 128, .18);
 }
-html, body { font-family: var(--font); background: var(--win); letter-spacing: -.01em; }
-button, input, select, textarea { font-family: inherit; }
+body:not(.mobile), body:not(.mobile) { font-family: var(--font); background: var(--win); letter-spacing: -.01em; }
+body:not(.mobile) button, body:not(.mobile) input, body:not(.mobile) select, body:not(.mobile) textarea { font-family: inherit; }
 
 /* ---------- PC 배치: 떠 있는 카드들 ---------- */
 body:not(.mobile) #app {
@@ -31,7 +31,7 @@ body:not(.mobile) #app {
   column-gap: 8px; padding: 0 10px; background: var(--win);
 }
 body:not(.mobile).no-panel #app { grid-template-columns: 58px minmax(0, 1fr); grid-template-areas: "top top" "left center" "status status"; }
-#rbar { display: none !important; }
+body:not(.mobile) #rbar { display: none !important; }
 body:not(.mobile) #top { border-bottom: 0; background: transparent; padding: 0 2px; gap: 6px; }
 body:not(.mobile) #left { border-right: 0; background: var(--panel); border-radius: 18px; padding: 8px 0; gap: 2px; box-shadow: inset 0 0 0 1px var(--line); }
 body:not(.mobile) #center { background: transparent; }
@@ -48,155 +48,167 @@ body:not(.mobile) #status { border-top: 0; background: transparent; padding: 0 6
 }
 
 /* ---------- 위 막대: 캡슐·원형 버튼, 세그먼트 ---------- */
-.logo { padding: 0 10px 0 4px; }
-.logo-m { border-radius: 9px; }
-.tbtn { height: 32px; min-width: 32px; padding: 0 12px; border-radius: 999px; font-weight: 500; transition: background .15s, color .15s; }
-.tbtn:hover { background: var(--hover); }
-.tbtn.ic { width: 32px; padding: 0; }
-.tbtn.ic svg, .tbtn .ic svg { width: 21px; height: 21px; }
-.tbtn.sym { background: var(--panel2); padding: 0 14px 0 5px; gap: 7px; }
-.tbtn.sym:hover { background: var(--panel3); }
-.sym-s { border: 0; border-radius: 999px; background: var(--panel3); padding: 1px 8px; font-weight: 600; }
-.tsep { width: 0; margin: 0 3px; }
-.ivs { height: 32px; padding: 2px; border-radius: 999px; background: var(--panel2); }
-.tbtn.iv { height: 28px; min-width: 34px; padding: 0 9px; color: var(--dim); font-weight: 600; }
-.tbtn.iv:hover { background: transparent; color: var(--text); }
-.tbtn.iv.on { background: var(--seg-on); color: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, .28), 0 0 0 .5px rgba(0, 0, 0, .06); }
-.tbtn.iv:disabled { background: transparent; }
-.tbtn.on { color: var(--acc); }
-.tbtn.help { font-size: 15px; }
-.tseg { display: flex; align-items: center; gap: 2px; height: 32px; padding: 2px; border-radius: 999px; background: var(--panel2); flex: none; }
-.tseg .rb-btn { width: 34px; height: 28px; border-radius: 999px; color: var(--dim); }
-.tseg .rb-btn svg { width: 21px; height: 21px; }
-.tseg .rb-btn:hover { background: transparent; color: var(--text); }
-.tseg .rb-btn.on { background: var(--seg-on); color: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, .28); }
+body:not(.mobile) .logo { padding: 0 10px 0 4px; }
+body:not(.mobile) .logo-m { border-radius: 9px; }
+body:not(.mobile) .tbtn { height: 32px; min-width: 32px; padding: 0 12px; border-radius: 999px; font-weight: 500; transition: background .15s, color .15s; }
+body:not(.mobile) .tbtn:hover { background: var(--hover); }
+body:not(.mobile) .tbtn.ic { width: 32px; padding: 0; }
+body:not(.mobile) .tbtn.ic svg, body:not(.mobile) .tbtn .ic svg { width: 21px; height: 21px; }
+body:not(.mobile) .tbtn.sym { background: var(--panel2); padding: 0 14px 0 5px; gap: 7px; }
+body:not(.mobile) .tbtn.sym:hover { background: var(--panel3); }
+body:not(.mobile) .sym-s { border: 0; border-radius: 999px; background: var(--panel3); padding: 1px 8px; font-weight: 600; }
+body:not(.mobile) .tsep { width: 0; margin: 0 3px; }
+body:not(.mobile) .ivs { height: 32px; padding: 2px; border-radius: 999px; background: var(--panel2); }
+body:not(.mobile) .tbtn.iv { height: 28px; min-width: 34px; padding: 0 9px; color: var(--dim); font-weight: 600; }
+body:not(.mobile) .tbtn.iv:hover { background: transparent; color: var(--text); }
+body:not(.mobile) .tbtn.iv.on { background: var(--seg-on); color: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, .28), 0 0 0 .5px rgba(0, 0, 0, .06); }
+body:not(.mobile) .tbtn.iv:disabled { background: transparent; }
+body:not(.mobile) .tbtn.on { color: var(--acc); }
+body:not(.mobile) .tbtn.help { font-size: 15px; }
+body:not(.mobile) .tseg { display: flex; align-items: center; gap: 2px; height: 32px; padding: 2px; border-radius: 999px; background: var(--panel2); flex: none; }
+body:not(.mobile) .tseg .rb-btn { width: 34px; height: 28px; border-radius: 999px; color: var(--dim); }
+body:not(.mobile) .tseg .rb-btn svg { width: 21px; height: 21px; }
+body:not(.mobile) .tseg .rb-btn:hover { background: transparent; color: var(--text); }
+body:not(.mobile) .tseg .rb-btn.on { background: var(--seg-on); color: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, .28); }
 
 /* ---------- 왼쪽 도구 팔레트 ---------- */
-.tb { width: 40px; height: 38px; border-radius: 11px; transition: background .15s, color .15s; }
-.tb svg { width: 26px; height: 26px; }
-.tb:hover { background: var(--hover); }
-.tb.on { background: var(--acc-t); color: var(--acc); }
-.tb-sep { width: 26px; margin: 5px 0; background: var(--line); }
-.tb-ar::after { border-left-color: var(--dim); }
+body:not(.mobile) .tb { width: 40px; height: 38px; border-radius: 11px; transition: background .15s, color .15s; }
+body:not(.mobile) .tb svg { width: 26px; height: 26px; }
+body:not(.mobile) .tb:hover { background: var(--hover); }
+body:not(.mobile) .tb.on { background: var(--acc-t); color: var(--acc); }
+body:not(.mobile) .tb-sep { width: 26px; margin: 5px 0; background: var(--line); }
+body:not(.mobile) .tb-ar::after { border-left-color: var(--dim); }
 
 /* ---------- 메뉴·팝오버: 반투명 재질 + 둥근 강조 ---------- */
-.pop { background: var(--mat); -webkit-backdrop-filter: blur(30px) saturate(1.8); backdrop-filter: blur(30px) saturate(1.8); border: 1px solid var(--mat-edge); border-radius: 14px; padding: 5px; box-shadow: 0 18px 50px var(--shadow), 0 0 0 .5px rgba(0, 0, 0, .35); }
-.fly-item, .ctx-item { border-radius: 8px; }
-.fly-item:hover, .ctx-item:hover { background: var(--acc); color: #fff; }
-.fly-item:hover .fly-key { color: rgba(255, 255, 255, .8); }
-.ctx-item.danger:hover { background: var(--red); color: #fff; }
-.fly-title, .fly-head { padding: 7px 10px 3px; }
-.ctx-sep { margin: 4px 8px; background: var(--line); }
-.emo-b { border-radius: 10px; }
-.pal { padding: 10px; width: 258px; }
-.pal-grid { gap: 6px; }
-.pal-sw { width: 24px; height: 24px; border-radius: 50%; border: 0; box-shadow: inset 0 0 0 1px rgba(128, 128, 128, .35); }
-.pal-sw.on { outline: 2px solid var(--acc); outline-offset: 2px; }
-.sw { width: 28px; height: 28px; padding: 4px; border-radius: 50%; border: 0; background: var(--panel2); }
-.sw::before { border-radius: 50%; }
+body:not(.mobile) .pop { background: var(--mat); -webkit-backdrop-filter: blur(30px) saturate(1.8); backdrop-filter: blur(30px) saturate(1.8); border: 1px solid var(--mat-edge); border-radius: 14px; padding: 5px; box-shadow: 0 18px 50px var(--shadow), 0 0 0 .5px rgba(0, 0, 0, .35); }
+body:not(.mobile) .fly-item, body:not(.mobile) .ctx-item { border-radius: 8px; }
+body:not(.mobile) .fly-item:hover, body:not(.mobile) .ctx-item:hover { background: var(--acc); color: #fff; }
+body:not(.mobile) .fly-item:hover .fly-key { color: rgba(255, 255, 255, .8); }
+body:not(.mobile) .ctx-item.danger:hover { background: var(--red); color: #fff; }
+body:not(.mobile) .fly-title, body:not(.mobile) .fly-head { padding: 7px 10px 3px; }
+body:not(.mobile) .ctx-sep { margin: 4px 8px; background: var(--line); }
+body:not(.mobile) .emo-b { border-radius: 10px; }
+body:not(.mobile) .pal { padding: 10px; width: 258px; }
+body:not(.mobile) .pal-grid { gap: 6px; }
+body:not(.mobile) .pal-sw { width: 24px; height: 24px; border-radius: 50%; border: 0; box-shadow: inset 0 0 0 1px rgba(128, 128, 128, .35); }
+body:not(.mobile) .pal-sw.on { outline: 2px solid var(--acc); outline-offset: 2px; }
+body:not(.mobile) .sw { width: 28px; height: 28px; padding: 4px; border-radius: 50%; border: 0; background: var(--panel2); }
+body:not(.mobile) .sw::before { border-radius: 50%; }
 
 /* ---------- 대화상자 ---------- */
-.modal-ov { background: rgba(0, 0, 0, .38); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
-.modal { border: 1px solid var(--line); border-radius: 20px; background: var(--panel); box-shadow: 0 30px 90px rgba(0, 0, 0, .55); }
-.m-head { padding: 16px 14px 6px 22px; border-bottom: 0; font-size: 16px; }
-.m-x { width: 30px; height: 30px; border-radius: 50%; background: var(--panel2); }
-.m-x svg { width: 18px; height: 18px; }
-.m-x:hover { background: var(--panel3); }
-.m-body { padding: 8px 22px 14px; }
-.m-foot { gap: 10px; padding: 6px 22px 20px; border-top: 0; justify-content: flex-end; }
-.f-sec { border-bottom: 0; margin-top: 14px; padding-bottom: 6px; text-transform: none; letter-spacing: 0; }
-.f-row { min-height: 36px; }
-.confirm-msg { font-size: 14px; }
-.help-row kbd { border-radius: 7px; border: 0; background: var(--panel2); }
+body:not(.mobile) .modal-ov { background: rgba(0, 0, 0, .38); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+body:not(.mobile) .modal { border: 1px solid var(--line); border-radius: 20px; background: var(--panel); box-shadow: 0 30px 90px rgba(0, 0, 0, .55); }
+body:not(.mobile) .m-head { padding: 16px 14px 6px 22px; border-bottom: 0; font-size: 16px; }
+body:not(.mobile) .m-x { width: 30px; height: 30px; border-radius: 50%; background: var(--panel2); }
+body:not(.mobile) .m-x svg { width: 18px; height: 18px; }
+body:not(.mobile) .m-x:hover { background: var(--panel3); }
+body:not(.mobile) .m-body { padding: 8px 22px 14px; }
+body:not(.mobile) .m-foot { gap: 10px; padding: 6px 22px 20px; border-top: 0; justify-content: flex-end; }
+body:not(.mobile) .f-sec { border-bottom: 0; margin-top: 14px; padding-bottom: 6px; text-transform: none; letter-spacing: 0; }
+body:not(.mobile) .f-row { min-height: 36px; }
+body:not(.mobile) .confirm-msg { font-size: 14px; }
+body:not(.mobile) .help-row kbd { border-radius: 7px; border: 0; background: var(--panel2); }
 
 /* ---------- 버튼·입력 ---------- */
-.btn { height: 32px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--panel2); font-weight: 600; transition: background .15s, filter .15s; }
-.btn:hover { background: var(--panel3); }
-.btn.pri { background: var(--acc); color: #fff; }
-.btn.pri:hover { background: var(--acc); filter: brightness(1.12); }
-.btn.small { height: 28px; padding: 0 12px; }
-.mini { min-width: 26px; height: 26px; border-radius: 999px; }
-.mini:hover { background: var(--hover); color: var(--acc); }
-input, select, textarea { border: 1px solid transparent; border-radius: 9px; background: var(--panel2); transition: box-shadow .15s, border-color .15s; }
-input:focus, select:focus, textarea:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(10, 132, 255, .32); }
-select {
+body:not(.mobile) .btn { height: 32px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--panel2); font-weight: 600; transition: background .15s, filter .15s; }
+body:not(.mobile) .btn:hover { background: var(--panel3); }
+body:not(.mobile) .btn.pri { background: var(--acc); color: #fff; }
+body:not(.mobile) .btn.pri:hover { background: var(--acc); filter: brightness(1.12); }
+body:not(.mobile) .btn.small { height: 28px; padding: 0 12px; }
+body:not(.mobile) .mini { min-width: 26px; height: 26px; border-radius: 999px; }
+body:not(.mobile) .mini:hover { background: var(--hover); color: var(--acc); }
+body:not(.mobile) input, body:not(.mobile) select, body:not(.mobile) textarea { border: 1px solid transparent; border-radius: 9px; background: var(--panel2); transition: box-shadow .15s, border-color .15s; }
+body:not(.mobile) input:focus, body:not(.mobile) select:focus, body:not(.mobile) textarea:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(10, 132, 255, .32); }
+body:not(.mobile) select {
   -webkit-appearance: none; appearance: none; padding-right: 26px; cursor: pointer;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%238e8e93' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 8px center; background-size: 12px;
 }
-input[type=range] { accent-color: var(--acc); background: transparent; }
-input[type=color] { border-radius: 8px; }
+body:not(.mobile) input[type=range] { accent-color: var(--acc); background: transparent; }
+body:not(.mobile) input[type=color] { border-radius: 8px; }
 /* 체크박스 → iOS 스위치 */
-input[type=checkbox] {
+body:not(.mobile) input[type=checkbox] {
   -webkit-appearance: none; appearance: none; flex: none; width: 36px; height: 22px; margin: 0; padding: 0; border: 0; border-radius: 999px; cursor: pointer; vertical-align: middle;
   background-color: var(--sw-off); background-repeat: no-repeat; background-position: 0 0;
   background-image: radial-gradient(circle at 11px 11px, #fff 0, #fff 8.6px, rgba(0, 0, 0, .12) 9.2px, transparent 9.8px);
   transition: background-color .2s, background-position .2s;
 }
-input[type=checkbox]:checked { background-color: var(--green); background-position: 14px 0; }
-input[type=checkbox]:focus { box-shadow: none; border: 0; }
-input[type=checkbox]:focus-visible { box-shadow: 0 0 0 3px rgba(10, 132, 255, .4); }
+body:not(.mobile) input[type=checkbox]:checked { background-color: var(--green); background-position: 14px 0; }
+body:not(.mobile) input[type=checkbox]:focus { box-shadow: none; border: 0; }
+body:not(.mobile) input[type=checkbox]:focus-visible { box-shadow: 0 0 0 3px rgba(10, 132, 255, .4); }
 
 /* ---------- 검색·지표 목록 ---------- */
-.s-in { border-radius: 12px; }
-.s-tab { height: 30px; border: 0; border-radius: 999px; background: var(--panel2); font-weight: 600; }
-.s-tab:hover { background: var(--panel3); }
-.s-tab.on { background: var(--acc); color: #fff; }
-.s-list { border-top: 0; }
-.s-row { margin: 0 8px; border-radius: 10px; }
-.s-row.hi { background: var(--acc-t); }
-.s-src { border-radius: 999px; padding: 1px 8px; }
-.s-add { width: 26px; height: 26px; border: 0; background: var(--panel2); }
-.s-row.added .s-add { background: var(--acc); }
-.i-row { margin: 0 8px; border-radius: 10px; }
-.i-cur { border-bottom: 0; }
-.o-row { margin: 0 6px; border-radius: 9px; }
+body:not(.mobile) .s-in { border-radius: 12px; }
+body:not(.mobile) .s-tab { height: 30px; border: 0; border-radius: 999px; background: var(--panel2); font-weight: 600; }
+body:not(.mobile) .s-tab:hover { background: var(--panel3); }
+body:not(.mobile) .s-tab.on { background: var(--acc); color: #fff; }
+body:not(.mobile) .s-list { border-top: 0; }
+body:not(.mobile) .s-row { margin: 0 8px; border-radius: 10px; }
+body:not(.mobile) .s-row.hi { background: var(--acc-t); }
+body:not(.mobile) .s-src { border-radius: 999px; padding: 1px 8px; }
+body:not(.mobile) .s-add { width: 26px; height: 26px; border: 0; background: var(--panel2); }
+body:not(.mobile) .s-row.added .s-add { background: var(--acc); }
+body:not(.mobile) .i-row { margin: 0 8px; border-radius: 10px; }
+body:not(.mobile) .i-cur { border-bottom: 0; }
+body:not(.mobile) .o-row { margin: 0 6px; border-radius: 9px; }
 
 /* ---------- 오른쪽 사이드바: 관심종목 ---------- */
-.rp-title, .wl-head { border-bottom: 0; }
-.wl-head { height: 52px; padding: 0 8px 0 10px; }
-.wl-name { border-radius: 999px; font-size: 15px; padding: 0 10px; }
-.wl-btn { border-radius: 50%; }
-.wl-cols { margin: 0 8px; border-bottom: 1px solid var(--line); }
-.wl-row { margin: 1px 6px; border-radius: 9px; }
-.wl-row.on { background: var(--acc-t); }
-.wl-row.sel { background: rgba(10, 132, 255, .3); }
-.wl-list:focus .wl-row.sel { box-shadow: none; }
-.wl-flag { border-radius: 3px; height: 60%; }
-.wl-sec { margin: 8px 6px 0; border-top: 0; border-radius: 8px; text-transform: none; letter-spacing: 0; font-size: 12px; }
-.wl-x { border-radius: 50%; }
-.wl-split { border-top: 1px solid var(--line); }
-.d-ex { border: 0; border-radius: 999px; background: var(--panel2); padding: 1px 8px; }
-.d-pt { border-radius: 12px; }
-.d-bar { height: 5px; border-radius: 3px; }
-.d-bar i { background: var(--acc); opacity: .7; border-radius: 3px; }
-.rp-tool .btn { flex: 1; }
-.a-row { border-bottom: 1px solid var(--line); }
+body:not(.mobile) .rp-title, body:not(.mobile) .wl-head { border-bottom: 0; }
+body:not(.mobile) .wl-head { height: 52px; padding: 0 8px 0 10px; }
+body:not(.mobile) .wl-name { border-radius: 999px; font-size: 15px; padding: 0 10px; }
+body:not(.mobile) .wl-btn { border-radius: 50%; }
+body:not(.mobile) .wl-cols { margin: 0 8px; border-bottom: 1px solid var(--line); }
+body:not(.mobile) .wl-row { margin: 1px 6px; border-radius: 9px; }
+body:not(.mobile) .wl-row.on { background: var(--acc-t); }
+body:not(.mobile) .wl-row.sel { background: rgba(10, 132, 255, .3); }
+body:not(.mobile) .wl-list:focus .wl-row.sel { box-shadow: none; }
+body:not(.mobile) .wl-flag { border-radius: 3px; height: 60%; }
+body:not(.mobile) .wl-sec { margin: 8px 6px 0; border-top: 0; border-radius: 8px; text-transform: none; letter-spacing: 0; font-size: 12px; }
+body:not(.mobile) .wl-x { border-radius: 50%; }
+body:not(.mobile) .wl-split { border-top: 1px solid var(--line); }
+body:not(.mobile) .d-ex { border: 0; border-radius: 999px; background: var(--panel2); padding: 1px 8px; }
+body:not(.mobile) .d-pt { border-radius: 12px; }
+body:not(.mobile) .d-bar { height: 5px; border-radius: 3px; }
+body:not(.mobile) .d-bar i { background: var(--acc); opacity: .7; border-radius: 3px; }
+body:not(.mobile) .rp-tool .btn { flex: 1; }
+body:not(.mobile) .a-row { border-bottom: 1px solid var(--line); }
 
 /* ---------- 차트 위 요소 ---------- */
-.lg-row { border-radius: 7px; }
-.lg-stat { border-radius: 999px; padding: 0 7px; }
-.lg-stat.live, .lg-stat.resync { color: var(--green); background: rgba(48, 209, 88, .14); }
-.lg-stat.poll { color: var(--orange); background: rgba(255, 159, 10, .14); }
-.lg-stat.reconnect, .lg-stat.error { color: var(--red); background: rgba(255, 69, 58, .14); }
-.lg-btns button { border-radius: 50%; }
-.chart-msg { border: 0; border-radius: 14px; background: var(--mat); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 10px 30px var(--shadow); }
-.scale-btns button { border-radius: 999px; padding: 1px 6px; }
-.dtb { top: 10px; padding: 4px 6px; border: 1px solid var(--mat-edge); border-radius: 999px; background: var(--mat); -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6); box-shadow: 0 10px 30px var(--shadow); }
-.dtb-b { width: 30px; height: 30px; border-radius: 50%; }
-.dtb-sel { border-radius: 999px; background: transparent; }
-.dtb .sw { width: 28px; height: 28px; background: transparent; }
-.replay-bar { padding: 5px 10px; border: 1px solid var(--mat-edge); border-radius: 999px; background: var(--mat); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
-.rb { border-radius: 50%; }
-.rb-s { border-radius: 999px; }
+body:not(.mobile) .lg-row { border-radius: 7px; }
+body:not(.mobile) .lg-stat { border-radius: 999px; padding: 0 7px; }
+body:not(.mobile) .lg-stat.live, body:not(.mobile) .lg-stat.resync { color: var(--green); background: rgba(48, 209, 88, .14); }
+body:not(.mobile) .lg-stat.poll { color: var(--orange); background: rgba(255, 159, 10, .14); }
+body:not(.mobile) .lg-stat.reconnect, body:not(.mobile) .lg-stat.error { color: var(--red); background: rgba(255, 69, 58, .14); }
+body:not(.mobile) .lg-btns button { border-radius: 50%; }
+body:not(.mobile) .chart-msg { border: 0; border-radius: 14px; background: var(--mat); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 10px 30px var(--shadow); }
+body:not(.mobile) .scale-btns button { border-radius: 999px; padding: 1px 6px; }
+body:not(.mobile) .dtb { top: 10px; padding: 4px 6px; border: 1px solid var(--mat-edge); border-radius: 999px; background: var(--mat); -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6); box-shadow: 0 10px 30px var(--shadow); }
+body:not(.mobile) .dtb-b { width: 30px; height: 30px; border-radius: 50%; }
+body:not(.mobile) .dtb-sel { border-radius: 999px; background: transparent; }
+body:not(.mobile) .dtb .sw { width: 28px; height: 28px; background: transparent; }
+body:not(.mobile) .replay-bar { padding: 5px 10px; border: 1px solid var(--mat-edge); border-radius: 999px; background: var(--mat); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
+body:not(.mobile) .rb { border-radius: 50%; }
+body:not(.mobile) .rb-s { border-radius: 999px; }
 
 /* ---------- 알림 토스트 ---------- */
-.toast { padding: 9px 18px; border-radius: 999px; background: var(--toast); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); font-weight: 500; }
-.toast.warn { background: #ff9f0a; color: #1d1d1f; }
-.toast.err { background: #ff453a; }
-.toast.alert { background: #ff9f0a; color: #1d1d1f; }
+body:not(.mobile) .toast { padding: 9px 18px; border-radius: 999px; background: var(--toast); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); font-weight: 500; }
+body:not(.mobile) .toast.warn { background: #ff9f0a; color: #1d1d1f; }
+body:not(.mobile) .toast.err { background: #ff453a; }
+body:not(.mobile) .toast.alert { background: #ff9f0a; color: #1d1d1f; }
 
 /* ---------- 상태줄 ---------- */
-.st-tz { height: 22px; border-radius: 999px; padding: 0 22px 0 8px; background-position: right 6px center; }
-.st-srv.on { color: var(--green); }
-.st-srv.off { color: var(--orange); }
+body:not(.mobile) .st-tz { height: 22px; border-radius: 999px; padding: 0 22px 0 8px; background-position: right 6px center; }
+body:not(.mobile) .st-srv.on { color: var(--green); }
+body:not(.mobile) .st-srv.off { color: var(--orange); }
+
+/* ---------- style.css에 직접 적힌 예전 색 → PC에서는 애플 색 ---------- */
+body:not(.mobile) .rp-resize:hover, body:not(.mobile) .wl-split:hover { background: rgba(10, 132, 255, .35); }
+body:not(.mobile) .w-row.on, body:not(.mobile) .o-row.on { background: var(--acc-t); }
+body:not(.mobile) .chart-msg.err, body:not(.mobile) .ctx-item.danger, body:not(.mobile) .s-empty.err, body:not(.mobile) .hint.warn,
+body:not(.mobile) .dtb-b.del:hover, body:not(.mobile) .rb.x:hover { color: var(--red); }
+body:not(.mobile) .d-status.live { color: var(--green); }
+body:not(.mobile) .d-status.poll { color: var(--orange); }
+body:not(.mobile) .c-last.fl-up { animation-name: aFlUp; }
+body:not(.mobile) .c-last.fl-dn { animation-name: aFlDn; }
+@keyframes aFlUp { 0% { background: rgba(48, 209, 88, .45); } 100% { background: transparent; } }
+@keyframes aFlDn { 0% { background: rgba(255, 69, 58, .45); } 100% { background: transparent; } }

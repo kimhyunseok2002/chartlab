@@ -21,7 +21,23 @@
       crossBg: '#1d1d1f', crossFg: '#ffffff', sep: 'rgba(60,60,67,0.18)', wm: 'rgba(0,0,0,0.04)', hFill: '#ffffff', sel: '#007aff', msg: '#1d1d1f',
     },
   };
+  // 모바일 화면은 애플 디자인을 적용하지 않음 — 예전 차트 색 그대로
+  const THEMES_CLASSIC = {
+    dark: {
+      bg: '#0f0f0f', grid: 'rgba(242,242,242,0.06)', text: '#b8b8b8', dim: '#8c8c8c', axis: '#2e2e2e', cross: '#8c8c8c',
+      crossBg: '#3a3a3a', crossFg: '#ffffff', sep: '#2e2e2e', wm: 'rgba(219,219,219,0.06)', hFill: '#0f0f0f', sel: '#2962ff', msg: '#dbdbdb',
+    },
+    navy: {
+      bg: '#131722', grid: 'rgba(42,46,57,0.6)', text: '#b2b5be', dim: '#787b86', axis: '#2a2e39', cross: '#9598a1',
+      crossBg: '#363a45', crossFg: '#ffffff', sep: '#2a2e39', wm: 'rgba(178,181,190,0.07)', hFill: '#131722', sel: '#2962ff', msg: '#d1d4dc',
+    },
+    light: {
+      bg: '#ffffff', grid: 'rgba(42,46,57,0.07)', text: '#131722', dim: '#787b86', axis: '#e0e3eb', cross: '#9598a1',
+      crossBg: '#131722', crossFg: '#ffffff', sep: '#e0e3eb', wm: 'rgba(19,23,34,0.05)', hFill: '#ffffff', sel: '#2962ff', msg: '#131722',
+    },
+  };
   CL.THEMES = THEMES;
+  CL.THEMES_CLASSIC = THEMES_CLASSIC;
   const DASH = (ls, w) => { const k = Math.max(1, w || 1); return ls === 1 ? [5 * k, 4 * k] : ls === 2 ? [k, 2.5 * k] : ls === 3 ? [1, 3] : []; };
   CL.DASH = DASH;
 
@@ -62,7 +78,8 @@
     get th() {
       const s = this.app.set, k = s.theme + '|' + (s.bgColor || '');
       if (k !== this._thK) {
-        const base = THEMES[s.theme] || THEMES.dark;
+        const set = this.app.mobile ? THEMES_CLASSIC : THEMES;
+        const base = set[s.theme] || set.dark;
         this._th = s.bgColor ? Object.assign({}, base, { bg: s.bgColor, hFill: s.bgColor }) : base;
         this._thK = k;
       }
@@ -214,7 +231,7 @@
       const pd = def.plots.find((q) => q.k === k) || {};
       const o = (ind.sty && ind.sty[k]) || {};
       return {
-        c: o.c || pd.c || '#0a84ff', w: o.w != null ? o.w : pd.w || 1, a: o.a != null ? o.a : pd.a != null ? pd.a : 1,
+        c: o.c || pd.c || (this.app.mobile ? '#2962ff' : '#0a84ff'), w: o.w != null ? o.w : pd.w || 1, a: o.a != null ? o.a : pd.a != null ? pd.a : 1,
         vis: o.vis != null ? o.vis : !pd.hidden, ls: o.ls != null ? o.ls : pd.ls || 0,
       };
     }
@@ -752,7 +769,8 @@
       const h = s2 ? 32 : 18, top = s2 ? y - 9 : y - 9;
       ctx.fillStyle = bg;
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(x0 + 2, top, this.axisW - 4, h, 6); else ctx.rect(x0 + 2, top, this.axisW - 4, h);
+      const mob = this.app.mobile, inset = mob ? 1 : 2; // 모바일은 예전 모양, PC는 둥근 이름표
+      if (ctx.roundRect) ctx.roundRect(x0 + inset, top, this.axisW - inset * 2, h, mob ? 2 : 6); else ctx.rect(x0 + inset, top, this.axisW - inset * 2, h);
       ctx.fill();
       ctx.fillStyle = fg; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.fillText(s, x0 + 8, y);
@@ -782,7 +800,8 @@
         const w = ctx.measureText(txt).width + 14;
         const bx = U.clamp(x - w / 2, 0, this.plotW - w);
         ctx.fillStyle = bg;
-        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, y0 + 3, w, this.timeH - 6, 7) : ctx.rect(bx, y0 + 3, w, this.timeH - 6); ctx.fill();
+        const mob = this.app.mobile, pad = mob ? 2 : 3;
+        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, y0 + pad, w, this.timeH - pad * 2, mob ? 2 : 7) : ctx.rect(bx, y0 + pad, w, this.timeH - pad * 2); ctx.fill();
         ctx.fillStyle = fg; ctx.textAlign = 'center';
         ctx.fillText(txt, bx + w / 2, y0 + this.timeH / 2 + 1);
       };

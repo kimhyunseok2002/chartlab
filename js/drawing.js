@@ -11,7 +11,7 @@
     begin(d, p, C) { this.d = d; this.p = p; this.C = C; this.hits = []; d._hits = this.hits; this.hl = d === this.ch.sel || d === this.ch.hov; }
     _stroke(o) {
       const ctx = this.ctx;
-      ctx.strokeStyle = o.c || '#0a84ff';
+      ctx.strokeStyle = o.c || '#2962ff';
       ctx.lineWidth = o.w || 1;
       ctx.setLineDash(DASH(o.ls || 0, o.w));
       ctx.lineCap = o.cap || (o.ls === 2 ? 'round' : 'butt');
@@ -93,7 +93,7 @@
       ctx.lineTo(x2 - sz * Math.cos(a - 0.42), y2 - sz * Math.sin(a - 0.42));
       ctx.lineTo(x2 - sz * Math.cos(a + 0.42), y2 - sz * Math.sin(a + 0.42));
       ctx.closePath();
-      ctx.fillStyle = o.c || '#0a84ff';
+      ctx.fillStyle = o.c || '#2962ff';
       ctx.fill();
     }
     text(str, x, y, o) {
@@ -115,7 +115,7 @@
         if (o.bg) { ctx.fillStyle = o.bg; ctx.fill(); }
         if (o.bd) { ctx.strokeStyle = o.bd; ctx.lineWidth = 1; ctx.stroke(); }
       }
-      ctx.fillStyle = o.c || '#d1d1d6';
+      ctx.fillStyle = o.c || '#d1d4dc';
       ctx.textBaseline = 'top';
       ctx.textAlign = 'left';
       lines.forEach((l, k) => {
@@ -127,8 +127,8 @@
       if (o.hit !== false) this.hits.push({ k: 'b', x: bx, y: by, w: bw, h: bh });
       return box;
     }
-    ptag(v, color) { this.ch.tags.push({ p: this.p, v, bg: color || '#0a84ff', fg: '#fff', prio: 3 }); }
-    ttag(t, color) { this.ch.ttags.push({ t, bg: color || '#0a84ff' }); }
+    ptag(v, color) { this.ch.tags.push({ p: this.p, v, bg: color || '#2962ff', fg: '#fff', prio: 3 }); }
+    ttag(t, color) { this.ch.ttags.push({ t, bg: color || '#2962ff' }); }
   }
   CL.Gfx = Gfx;
 
@@ -219,14 +219,14 @@
     }
     if (this.measure && this.measure.p.key === p.key) {
       const m = this.measure;
-      const md = { type: 'measure', s: { c: '#0a84ff' }, pts: m.pts, temp: true };
+      const md = { type: 'measure', s: { c: '#2962ff' }, pts: m.pts, temp: true };
       const Pts = this.screenPts(md, p);
       g.begin(md, p, C);
       try { T.measure.draw(g, md, Pts, C); } catch (e) { console.error(e); }
     }
     if (this.drag && this.drag.k === 'zoom' && this.drag.x1 != null && this.drag.p === p) {
       const d = this.drag, ctx = this.ctx;
-      ctx.fillStyle = U.rgba('#0a84ff', 0.12); ctx.strokeStyle = '#0a84ff'; ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
+      ctx.fillStyle = U.rgba('#2962ff', 0.12); ctx.strokeStyle = '#2962ff'; ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
       ctx.fillRect(Math.min(d.x0, d.x1), Math.min(d.y0, d.y1), Math.abs(d.x1 - d.x0), Math.abs(d.y1 - d.y0));
       ctx.strokeRect(Math.min(d.x0, d.x1) + 0.5, Math.min(d.y0, d.y1) + 0.5, Math.abs(d.x1 - d.x0), Math.abs(d.y1 - d.y0));
       ctx.setLineDash([]);
@@ -244,7 +244,7 @@
         if (!isFinite(h.x) || !isFinite(h.y)) continue;
         ctx.beginPath(); ctx.arc(h.x, h.y, strong ? 5 : 4, 0, Math.PI * 2);
         ctx.fillStyle = this.th.hFill; ctx.fill();
-        ctx.lineWidth = 1.5; ctx.strokeStyle = d.locked ? '#8e8e93' : this.th.sel; ctx.stroke();
+        ctx.lineWidth = 1.5; ctx.strokeStyle = d.locked ? '#787b86' : this.th.sel; ctx.stroke();
       }
     }
     // 선택 드로잉의 축 강조
@@ -455,7 +455,7 @@
     for (const a of list) {
       const y = Math.round(this.v2y(p, a.price)) + 0.5;
       if (!(y > p.top && y < p.top + p.h)) continue;
-      const col = a.fired ? '#8e8e93' : '#ff9f0a';
+      const col = a.fired ? '#787b86' : '#ff9800';
       ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.setLineDash([6, 4]);
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(this.plotW, y); ctx.stroke(); ctx.setLineDash([]);
       ctx.font = '11px ' + FONT; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillStyle = col;

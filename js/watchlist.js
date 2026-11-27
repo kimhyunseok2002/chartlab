@@ -152,7 +152,7 @@
     return /\.(KS|KQ)$/.test(sym) ? 'KRW' : '';
   };
   const decOf = (v) => { const a = Math.abs(v); return a >= 1000 ? (a >= 100000 ? 0 : 2) : a >= 1 ? 2 : a === 0 ? 2 : Math.min(8, Math.ceil(-Math.log10(a)) + 3); };
-  const FLAGC = { red: '#ff453a', blue: '#0a84ff', green: '#30d158', orange: '#ff9f0a', purple: '#bf5af2' };
+  const FLAGC = { red: '#f23645', blue: '#2962ff', green: '#089981', orange: '#ff9800', purple: '#9c27b0' };
   const FLAGN = { red: '빨강', blue: '파랑', green: '초록', orange: '주황', purple: '보라' };
   const sec = (name) => ({ t: 'sec', id: U.uid(), name });
   const sym = (src, s) => ({ t: 'sym', src, sym: s });

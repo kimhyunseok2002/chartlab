@@ -5,12 +5,52 @@
   const h = U.h;
 
   const DEFAULT_SET = {
-    theme: 'dark', colorMode: 'global', up: '#30d158', dn: '#ff453a', line: '#0a84ff',
+    theme: 'dark', colorMode: 'global', up: '#089981', dn: '#f23645', line: '#2962ff',
     grid: true, wm: true, hiLo: true, lastLine: true, countdown: true, indLabels: true,
     cursor: 'cross', magnet: 0, stayDraw: false, lockAll: false, hideAll: false,
     rightBars: 8, tz: 'local', syncCross: true, layout: '1', zoomAnchor: 'cursor', panel: true, panelTab: 'watch',
   };
-  const COLOR_MODES = { global: { up: '#30d158', dn: '#ff453a' }, kr: { up: '#ff3b30', dn: '#0a84ff' } };
+  // 캔들 색 프리셋: PC는 애플 디자인 색, 모바일 화면은 예전 색 그대로 (constructor에서 고름)
+  const COLOR_MODES_CLASSIC = { global: { up: '#089981', dn: '#f23645' }, kr: { up: '#f04452', dn: '#3182f6' } };
+  const COLOR_MODES_APPLE = { global: { up: '#30d158', dn: '#ff453a' }, kr: { up: '#ff3b30', dn: '#0a84ff' } };
+  let COLOR_MODES = COLOR_MODES_CLASSIC;
+
+  /* PC(애플 디자인)에서만: 드로잉 도구·지표 기본색, 색 고르기 판, 깃발 색을 애플 시스템 색으로 바꿈.
+     원본(tools.js·indicators.js·util.js·watchlist.js)은 모바일 화면이 쓰는 예전 색 그대로 둠 */
+  const APPLE_MAP = {
+    '#2962ff': '#0a84ff', '#787b86': '#8e8e93', '#f23645': '#ff453a', '#ff9800': '#ff9f0a', '#089981': '#30d158', '#4caf50': '#34c759',
+    '#9c27b0': '#bf5af2', '#131722': '#1c1c1e', '#2a2e39': '#2c2c2e', '#1e88e5': '#64d2ff', '#fbc02d': '#ffd60a', '#d1d4dc': '#d1d1d6',
+    '#7e57c2': '#5e5ce6', '#00bcd4': '#40c8e0', '#ff6d00': '#ff9500', '#e91e63': '#ff375f', '#ffeb3b': '#ffd60a', '#ff5252': '#ff6961',
+    '#e0e3eb': '#e5e5ea', '#9598a1': '#aeaeb2', '#43a047': '#248a3d', '#26a69a': '#66d4cf', '#22ab94': '#30d158', '#f0f3fa': '#f2f2f7',
+    '#e65100': '#c93400', '#b71c1c': '#d70015', '#b22833': '#d70015', '#81c784': '#89e89c', '#673ab7': '#5e5ce6', '#5d606b': '#636366',
+    '#ffd54f': '#ffe36e', '#ffb74d': '#ffc266', '#ffcdd2': '#ffd1cf', '#ef9a9a': '#ff8a80', '#ef5350': '#ff6961', '#f44336': '#ff453a',
+    '#f50057': '#ff2d55', '#ba68c8': '#da8fff', '#ab47bc': '#bf5af2', '#a5d6a7': '#a8e6b4', '#9575cd': '#7d7aff', '#64b5f6': '#70b8ff',
+    '#b2dfdb': '#b6ece9', '#009688': '#00c7be', '#3179f5': '#0a84ff', '#3182f6': '#0a84ff', '#f04452': '#ff3b30', '#f7525f': '#ff6961',
+    '#363a45': '#48484a', '#1e222d': '#1c1c1e', '#b2b5be': '#aeaeb2', '#434651': '#48484a',
+  };
+  const APPLE_PALETTE = [
+    '#ffffff', '#e5e5ea', '#c7c7cc', '#aeaeb2', '#8e8e93', '#636366', '#3a3a3c', '#000000',
+    '#ff453a', '#ff9f0a', '#ffd60a', '#30d158', '#66d4cf', '#64d2ff', '#0a84ff', '#bf5af2',
+    '#ffb3ad', '#ffd59e', '#fff0a0', '#a8ecb6', '#c2efec', '#c4ecff', '#a3cfff', '#e8c2fb',
+    '#b8241b', '#c26a00', '#b89500', '#1f8a3c', '#2c9a93', '#1f8fbf', '#0058c4', '#8a2fbf',
+    '#ff375f', '#5e5ce6', '#ac8e68', '#40c8e0', '#ff6482', '#7d7aff', '#c4a77d', '#5ac8fa',
+  ];
+  function applyApplePalette() {
+    const seen = new Set();
+    const walk = (o) => {
+      if (!o || typeof o !== 'object' || seen.has(o)) return;
+      seen.add(o);
+      for (const k of Object.keys(o)) {
+        const v = o[k];
+        if (typeof v === 'string') { const m = APPLE_MAP[v.toLowerCase()]; if (m) o[k] = m; }
+        else if (v && typeof v === 'object') walk(v);
+      }
+    };
+    for (const k in CL.TOOLS) walk(CL.TOOLS[k]);
+    for (const k in IND) if (IND[k] && typeof IND[k] === 'object' && IND[k].calc) walk(IND[k]);
+    if (CL.FLAGC) walk(CL.FLAGC);
+    U.PALETTE.splice(0, U.PALETTE.length, ...APPLE_PALETTE);
+  }
   const DEF_INDS = [{ type: 'vol' }, { type: 'mas' }, { type: 'rsi' }];
   const DEFAULT_SLOTS = [
     { src: 'upbit', sym: 'KRW-BTC', iv: '1h', inds: DEF_INDS },
@@ -38,9 +78,14 @@
   class App {
     constructor() {
       this.set = Object.assign({}, DEFAULT_SET, U.load('set', {}));
-      // 캔들 색이 프리셋(해외식·국내식)이면 지금 팔레트 색을 따름 — 예전 저장값(구 색)도 새 색으로
+      // 폰이면 모바일 화면 (mobile.js, 애플 디자인 미적용). 설정 → 화면에서 바꿀 수 있음
+      this.mobile = !!(CL.Mobile && CL.Mobile.want());
+      COLOR_MODES = this.mobile ? COLOR_MODES_CLASSIC : COLOR_MODES_APPLE;
+      CL.ACC = this.mobile ? '#2962ff' : '#0a84ff';
+      if (!this.mobile) applyApplePalette();
+      // 캔들 색이 프리셋(해외식·국내식)이면 그 화면의 프리셋 색을 따름. 라인 차트 기본색도 마찬가지
       if (COLOR_MODES[this.set.colorMode]) Object.assign(this.set, COLOR_MODES[this.set.colorMode]);
-      if (/^#2962ff$/i.test(this.set.line || '')) this.set.line = DEFAULT_SET.line;
+      if (/^#(2962ff|0a84ff)$/i.test(this.set.line || '')) this.set.line = CL.ACC;
       U.tzMode = this.set.tz;
       this.tool = 'cursor';
       this.toolDefaults = U.load('toolDefaults', {});
@@ -54,8 +99,6 @@
       this.el = {
         top: U.$('#top'), left: U.$('#left'), charts: U.$('#charts'), panel: U.$('#rpanel'), rbar: U.$('#rbar'), status: U.$('#status'),
       };
-      // 폰이면 모바일 화면 (mobile.js). 설정 → 화면에서 바꿀 수 있음
-      this.mobile = !!(CL.Mobile && CL.Mobile.want());
       if (this.mobile) document.body.classList.add('mobile');
       this.wl = new CL.Watchlist(this);
       // 시세 허브 → 가격 알림 확인
@@ -510,7 +553,7 @@
       const grid = h('div', { class: 'pal-grid' });
       let cur = color, a = alpha;
       for (const c of U.PALETTE) grid.append(h('button', { class: 'pal-sw' + (c.toLowerCase() === String(color).toLowerCase() ? ' on' : ''), style: { background: c }, title: c, onclick: (ev) => { cur = c; cb(cur, a); const me = ev.currentTarget; U.$$('.pal-sw', grid).forEach((x) => x.classList.toggle('on', x === me)); } }));
-      const custom = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(color) ? color : '#0a84ff', oninput: (e) => { cur = e.target.value; cb(cur, a); } });
+      const custom = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(color) ? color : CL.ACC, oninput: (e) => { cur = e.target.value; cb(cur, a); } });
       box.append(grid, h('div', { class: 'pal-row' }, h('span', { text: '사용자 색' }), custom));
       if (alpha != null) {
         const lab = h('span', { class: 'pal-a', text: Math.round(alpha * 100) + '%' });
@@ -815,7 +858,7 @@
                   this.swatch(() => l.c, (v) => { l.c = v; upd(); }),
                   h('button', { class: 'mini', html: ICON.close, title: '삭제', onclick: () => { s.levels.splice(i, 1); renderLv(); upd(); } })));
               });
-              box.append(h('button', { class: 'btn small', text: '+ 레벨 추가', onclick: () => { s.levels.push({ v: 1.5, c: '#0a84ff', on: true }); renderLv(); upd(); } }));
+              box.append(h('button', { class: 'btn small', text: '+ 레벨 추가', onclick: () => { s.levels.push({ v: 1.5, c: CL.ACC, on: true }); renderLv(); upd(); } }));
             };
             renderLv();
             body.append(box);
@@ -825,7 +868,7 @@
             let el;
             if (f.t === 'bool') el = h('input', { type: 'checkbox', checked: !!s[f.k], onchange: (e) => { s[f.k] = e.target.checked; upd(); } });
             else if (f.t === 'sel') el = h('select', { onchange: (e) => { const v = e.target.value; s[f.k] = isNaN(+v) || v === '' ? v : +v; upd(); } }, ...f.o.map(([v, n]) => h('option', { value: v, text: n, selected: String(s[f.k]) === String(v) })));
-            else if (f.t === 'color') el = this.swatch(() => s[f.k] || '#0a84ff', (v) => { s[f.k] = v; upd(); });
+            else if (f.t === 'color') el = this.swatch(() => s[f.k] || CL.ACC, (v) => { s[f.k] = v; upd(); });
             else if (f.t === 'str') el = h('input', { type: 'text', value: s[f.k] || '', oninput: (e) => { s[f.k] = e.target.value; upd(); } });
             else el = h('input', { type: 'number', step: f.step || 'any', value: s[f.k], oninput: (e) => { const v = parseFloat(e.target.value); if (isFinite(v)) { s[f.k] = v; upd(); } } });
             body.append(row(f.n, el));
